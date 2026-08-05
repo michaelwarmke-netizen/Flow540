@@ -75,7 +75,7 @@ export class OAuthCallbackServer {
               <body>
                 <div class="card">
                   <h1>✓ Authorization Successful</h1>
-                  <p>OpenWhispr Agent has successfully authorized with your Nexus Sandbox environment.</p>
+                  <p>Flow Agent has successfully authorized with your Nexus Sandbox environment.</p>
                   <p>You can close this browser tab and return to the application.</p>
                 </div>
               </body>
@@ -90,7 +90,7 @@ export class OAuthCallbackServer {
 
       // Default status response
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'ok', service: 'openwhispr-agent-oauth' }));
+      res.end(JSON.stringify({ status: 'ok', service: 'flow-agent-oauth' }));
     });
 
     this.server.listen(port, () => {

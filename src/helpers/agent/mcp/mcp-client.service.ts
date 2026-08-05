@@ -37,7 +37,7 @@ export class McpClientService {
     const result = await this.rpc<McpInitializeResult>('initialize', {
       protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: {},
-      clientInfo: { name: 'openwhispr-agent', version: '1.7.6' },
+      clientInfo: { name: 'flow-agent', version: '1.7.6' },
     });
     // Best-effort "initialized" notification (no response expected).
     await this.notify('notifications/initialized').catch((err) =>

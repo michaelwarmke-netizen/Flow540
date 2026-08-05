@@ -34,12 +34,12 @@
     },
     "openControlPanel": "Open Control Panel",
     "hideControlPanel": "Hide Control Panel",
-    "quit": "Quit OpenWhispr",
-    "tooltip": "OpenWhispr - Voice Dictation"
+    "quit": "Quit Flow",
+    "tooltip": "Flow - Voice Dictation"
   },
   "menu": {
-    "appLabel": "OpenWhispr",
-    "quit": "Quit OpenWhispr",
+    "appLabel": "Flow",
+    "quit": "Quit Flow",
     "speech": "Speech",
     "settings": "Settings...",
     "help": "Help",
@@ -773,7 +773,7 @@
       "protocolUnavailable": "Browser sign-in unavailable — re-register the openwhispr:// protocol in your system's Default Apps settings."
     },
     "welcomeSubtitle": "Dictate anywhere using your voice",
-    "welcomeTitle": "Welcome to OpenWhispr",
+    "welcomeTitle": "Welcome to Flow",
     "sessionExpired": "Session expired. Please restart the sign-up process."
   },
   "calendar": {
