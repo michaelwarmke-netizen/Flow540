@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AgentConfig } from '../config/agent-config.ts';
-import { loadAgentConfig } from '../config/agent-config.ts';
+import { loadAgentConfig, getAgentConfig } from '../config/agent-config.ts';
 import { Logger } from '../../logger.ts';
 import { codeChallengeS256, generateCodeVerifier, randomState } from './pkce.util.ts';
 import { TokenStore } from './token-store.ts';
@@ -93,15 +93,19 @@ export class TokenService {
   private static readonly sharedVerifiers = new Map<string, { verifier: string; expiresAt: number }>();
   private cachedAccessToken?: string;
   private cachedExpiresAt = 0;
-  private readonly config: AgentConfig;
+  private customConfig?: AgentConfig;
   private readonly store: TokenStore;
 
+  private get config(): AgentConfig {
+    return this.customConfig || getAgentConfig();
+  }
+
   constructor(
-    config: AgentConfig = loadAgentConfig(),
-    store: TokenStore = new TokenStore(config),
+    config?: AgentConfig,
+    store?: TokenStore,
   ) {
-    this.config = config;
-    this.store = store;
+    this.customConfig = config;
+    this.store = store || new TokenStore(config || getAgentConfig());
   }
 
   /** Resolve the authorize/token endpoints, discovering from issuer metadata when not set. */

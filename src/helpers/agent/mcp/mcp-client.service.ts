@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AgentConfig } from '../config/agent-config.ts';
-import { loadAgentConfig } from '../config/agent-config.ts';
+import { loadAgentConfig, getAgentConfig } from '../config/agent-config.ts';
 import { Logger } from '../../logger.ts';
 import { NeedsLoginError, TokenService } from '../oauth/token.service.ts';
 import type {
@@ -21,15 +21,19 @@ export class McpClientService {
   private readonly logger = new Logger(McpClientService.name);
   private nextId = 1;
   private initialized = false;
-  private readonly config: AgentConfig;
+  private customConfig?: AgentConfig;
   private readonly tokens: TokenService;
 
+  private get config(): AgentConfig {
+    return this.customConfig || getAgentConfig();
+  }
+
   constructor(
-    config: AgentConfig = loadAgentConfig(),
-    tokens: TokenService = new TokenService(config),
+    config?: AgentConfig,
+    tokens?: TokenService,
   ) {
-    this.config = config;
-    this.tokens = tokens;
+    this.customConfig = config;
+    this.tokens = tokens || new TokenService(config);
   }
 
   /** MCP handshake. Safe to call repeatedly — only the first call hits the wire. */
