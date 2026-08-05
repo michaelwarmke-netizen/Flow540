@@ -26,6 +26,8 @@ export interface OAuthConfig {
   clientSecret: string;
   /** Space-separated scopes to request. */
   scopes: string;
+  /** Manual static access token provided directly when OAuth server is unreachable. */
+  manualAccessToken?: string;
 }
 
 export interface AgentLlmConfig {
@@ -81,6 +83,7 @@ export function loadAgentConfig(env: NodeJS.ProcessEnv = process.env): AgentConf
       clientId: env.OAUTH_CLIENT_ID ?? '',
       clientSecret: env.OAUTH_CLIENT_SECRET ?? '',
       scopes: env.OAUTH_SCOPES ?? 'openid offline_access',
+      manualAccessToken: env.OAUTH_MANUAL_TOKEN ?? env.OAUTH_ACCESS_TOKEN ?? '',
     },
     llm: llmConfig,
     gemini: llmConfig,

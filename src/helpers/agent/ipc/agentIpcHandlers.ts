@@ -141,6 +141,7 @@ export function registerAgentIpcHandlers(ipcMain: any, shell?: any): void {
             clientId: config.oauth.clientId,
             clientSecret: config.oauth.clientSecret ? '***' : '',
             scopes: config.oauth.scopes,
+            manualAccessToken: config.oauth.manualAccessToken ?? '',
           },
           llm: config.llm,
         },

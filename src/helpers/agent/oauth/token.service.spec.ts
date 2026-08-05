@@ -72,8 +72,9 @@ describe('decodeTokenInfo', () => {
     assert.deepStrictEqual(decodeTokenInfo(makeJwt({ sub: 'x' })).scopes, []);
   });
 
-  it('throws when the token is not a JWT', () => {
-    assert.throws(() => decodeTokenInfo('not-a-jwt'), /not a JWT/);
+  it('handles non-JWT opaque manual tokens gracefully', () => {
+    const info = decodeTokenInfo('not-a-jwt');
+    assert.deepStrictEqual(info.scopes, ['manual-bearer-token']);
   });
 });
 

@@ -23,6 +23,7 @@ import {
   Loader2,
   Wrench,
   Terminal,
+  Key,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -100,6 +101,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
   const [oauthIssuer, setOauthIssuer] = useState<string>("http://localhost:3003");
   const [oauthClientId, setOauthClientId] = useState<string>("");
   const [oauthClientSecret, setOauthClientSecret] = useState<string>("");
+  const [manualAccessToken, setManualAccessToken] = useState<string>("");
   const [isConfigSaving, setIsConfigSaving] = useState<boolean>(false);
   const [configSaveSuccess, setConfigSaveSuccess] = useState<boolean>(false);
 
@@ -111,6 +113,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
           if (res.config.mcpServerUrl) setMcpServerUrl(res.config.mcpServerUrl);
           if (res.config.oauth?.issuer) setOauthIssuer(res.config.oauth.issuer);
           if (res.config.oauth?.clientId) setOauthClientId(res.config.oauth.clientId);
+          if (res.config.oauth?.manualAccessToken) setManualAccessToken(res.config.oauth.manualAccessToken);
         }
       });
     }
@@ -127,6 +130,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
           oauth: {
             issuer: oauthIssuer.trim(),
             clientId: oauthClientId.trim(),
+            manualAccessToken: manualAccessToken.trim(),
             ...(oauthClientSecret ? { clientSecret: oauthClientSecret.trim() } : {}),
           },
         });
@@ -540,6 +544,22 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
                 placeholder="Leave blank to keep existing secret"
                 className="w-full h-8 px-2.5 rounded border border-border/60 bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
               />
+            </div>
+
+            <div className="space-y-1.5 md:col-span-2 pt-2 border-t border-border/30">
+              <label className="font-medium text-foreground flex items-center gap-1">
+                <Key size={12} className="text-amber-500" /> Static Access Token / Bearer Token (Manual Auth Bypass)
+              </label>
+              <input
+                type="password"
+                value={manualAccessToken}
+                onChange={(e) => setManualAccessToken(e.target.value)}
+                placeholder="Paste Bearer token here if OAuth server is unreachable on this machine"
+                className="w-full h-8 px-2.5 rounded border border-border/60 bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+              />
+              <span className="text-[10px] text-muted-foreground block">
+                Bypasses live OAuth login. When set, this token is passed as <code>Authorization: Bearer &lt;token&gt;</code> directly to your MCP Sandbox server.
+              </span>
             </div>
           </div>
         </div>

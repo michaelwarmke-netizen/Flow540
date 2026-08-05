@@ -42,15 +42,26 @@ export interface TokenInfo {
 /**
  * Decode (WITHOUT verifying) the claims of an OAuth access-token JWT.
  */
-export function decodeTokenInfo(accessToken: string): TokenInfo {
-  const parts = accessToken.split('.');
-  if (parts.length < 2) throw new Error('Access token is not a JWT');
-  let payload: Record<string, unknown>;
+export function decodeTokenInfo(token: string): TokenInfo {
+  let payload: Record<string, unknown> = {};
   try {
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    payload = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+    const parts = token.split('.');
+    if (parts.length >= 2) {
+      const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      payload = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+    } else {
+      return {
+        scopes: ['manual-bearer-token'],
+        subject: 'manual-token-user',
+        expiresInSeconds: 86400,
+      };
+    }
   } catch {
-    throw new Error('Failed to decode access token payload');
+    return {
+      scopes: ['manual-bearer-token'],
+      subject: 'manual-token-user',
+      expiresInSeconds: 86400,
+    };
   }
   const scopeClaim = payload['scope'] ?? payload['scopes'];
   const scopes = Array.isArray(scopeClaim)
@@ -160,6 +171,9 @@ export class TokenService {
 
   /** A valid access token, refreshing transparently. Throws NeedsLoginError if none. */
   async getAccessToken(): Promise<string> {
+    if (this.config.oauth.manualAccessToken && this.config.oauth.manualAccessToken.trim().length > 0) {
+      return this.config.oauth.manualAccessToken.trim();
+    }
     if (this.cachedAccessToken && Date.now() < this.cachedExpiresAt - 30_000) {
       return this.cachedAccessToken;
     }
