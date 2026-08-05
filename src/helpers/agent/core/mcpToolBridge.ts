@@ -32,7 +32,21 @@ export function bridgeMcpToolList(
         if (res.isError) {
           throw new Error(res.content.map((c) => c.text ?? JSON.stringify(c)).join('\n'));
         }
-        return res.content.map((c) => c.text ?? JSON.stringify(c)).join('\n');
+        return res.content.map((c) => {
+          if (c.type === 'text' && typeof c.text === 'string') {
+            const trimmed = c.text.trim();
+            if (
+              (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+              (trimmed.startsWith('[') && trimmed.endsWith(']'))
+            ) {
+              try {
+                return JSON.stringify(JSON.parse(trimmed), null, 2);
+              } catch (_) {}
+            }
+            return c.text;
+          }
+          return JSON.stringify(c);
+        }).join('\n\n');
       },
     });
   }

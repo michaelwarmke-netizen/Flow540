@@ -109,6 +109,40 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
   const [toolRunArgs, setToolRunArgs] = useState<Record<string, string>>({});
   const [executingToolName, setExecutingToolName] = useState<string | null>(null);
   const [toolRunResults, setToolRunResults] = useState<Record<string, any>>({});
+  const [showRawResult, setShowRawResult] = useState<Record<string, boolean>>({});
+
+  const formatMcpResult = (runResult: any) => {
+    if (!runResult) return "";
+    if (!runResult.success) {
+      return runResult.error || JSON.stringify(runResult, null, 2);
+    }
+
+    const rawObj = runResult.result || runResult;
+    const content = rawObj?.content || rawObj?.result?.content;
+
+    if (Array.isArray(content)) {
+      const unescapedBlocks = content.map((item: any) => {
+        if (item && item.type === "text" && typeof item.text === "string") {
+          const trimmed = item.text.trim();
+          if (
+            (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+            (trimmed.startsWith("[") && trimmed.endsWith("]"))
+          ) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              return JSON.stringify(parsed, null, 2);
+            } catch (_) {}
+          }
+          return item.text;
+        }
+        return typeof item === "string" ? item : JSON.stringify(item, null, 2);
+      });
+
+      return unescapedBlocks.join("\n\n---\n\n");
+    }
+
+    return JSON.stringify(rawObj, null, 2);
+  };
 
   const handleExecuteTool = async (toolName: string) => {
     setExecutingToolName(toolName);
@@ -768,7 +802,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
                           {/* Execution Result Display */}
                           {runResult && (
                             <div
-                              className={`p-3 rounded-lg border text-xs space-y-1.5 ${
+                              className={`p-3.5 rounded-xl border text-xs space-y-2 ${
                                 runResult.success
                                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                                   : "border-destructive/30 bg-destructive/10 text-destructive"
@@ -783,10 +817,25 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
                                   )}
                                   Execution Result: {runResult.success ? "Success" : "Error"}
                                 </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setShowRawResult((prev) => ({
+                                      ...prev,
+                                      [t.name]: !prev[t.name],
+                                    }))
+                                  }
+                                  className="text-[10px] underline hover:text-foreground font-mono"
+                                >
+                                  {showRawResult[t.name] ? "View Unescaped JSON" : "View Raw Response"}
+                                </button>
                               </div>
 
-                              <pre className="p-2.5 rounded bg-background/80 border border-border/40 font-mono text-[11px] overflow-x-auto text-foreground max-h-60 whitespace-pre-wrap">
-                                {JSON.stringify(runResult.result || runResult.error || runResult, null, 2)}
+                              <pre className="p-3 rounded-lg bg-background/90 border border-border/40 font-mono text-[11px] overflow-x-auto text-foreground max-h-80 whitespace-pre-wrap leading-relaxed shadow-2xs">
+                                {showRawResult[t.name]
+                                  ? JSON.stringify(runResult.result || runResult.error || runResult, null, 2)
+                                  : formatMcpResult(runResult)}
                               </pre>
                             </div>
                           )}
