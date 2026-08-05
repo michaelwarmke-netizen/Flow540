@@ -79,7 +79,7 @@ export function decodeTokenInfo(accessToken: string): TokenInfo {
 export class TokenService {
   private readonly logger = new Logger(TokenService.name);
   private endpoints?: OAuthEndpoints;
-  private readonly verifiers = new Map<string, string>();
+  private static readonly sharedVerifiers = new Map<string, { verifier: string; expiresAt: number }>();
   private cachedAccessToken?: string;
   private cachedExpiresAt = 0;
   private readonly config: AgentConfig;
@@ -116,7 +116,10 @@ export class TokenService {
     const { authorizationEndpoint } = await this.resolveEndpoints();
     const verifier = generateCodeVerifier();
     const state = randomState();
-    this.verifiers.set(state, verifier);
+    TokenService.sharedVerifiers.set(state, {
+      verifier,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    });
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -132,9 +135,13 @@ export class TokenService {
 
   /** Exchange the authorization code for tokens; persist the refresh token. */
   async handleCallback(code: string, state: string): Promise<void> {
-    const verifier = this.verifiers.get(state);
-    if (!verifier) throw new Error('Unknown or expired state — restart the login flow.');
-    this.verifiers.delete(state);
+    const entry = TokenService.sharedVerifiers.get(state);
+    if (!entry || entry.expiresAt < Date.now()) {
+      if (entry) TokenService.sharedVerifiers.delete(state);
+      throw new Error('Unknown or expired state — restart the login flow.');
+    }
+    TokenService.sharedVerifiers.delete(state);
+    const verifier = entry.verifier;
 
     const { tokenEndpoint } = await this.resolveEndpoints();
     const body = new URLSearchParams({
