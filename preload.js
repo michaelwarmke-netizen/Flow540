@@ -280,6 +280,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   agentCancel: (sessionId) => ipcRenderer.invoke("agent:cancel", sessionId),
   agentListSessions: () => ipcRenderer.invoke("agent:list-sessions"),
   agentListTools: () => ipcRenderer.invoke("agent:list-tools"),
+  agentCallTool: (toolName, args) => ipcRenderer.invoke("agent:call-tool", toolName, args),
   agentLogin: () => ipcRenderer.invoke("agent:login"),
   agentOauthCallback: (code, state) => ipcRenderer.invoke("agent:oauth-callback", code, state),
   agentTokenInfo: () => ipcRenderer.invoke("agent:token-info"),

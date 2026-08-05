@@ -74,6 +74,16 @@ export function registerAgentIpcHandlers(ipcMain: any, shell?: any): void {
     }
   });
 
+  /** Execute a specific tool directly by name and arguments. */
+  ipcMain.handle('agent:call-tool', async (_event: any, toolName: string, args: Record<string, unknown>) => {
+    try {
+      const result = await mcpClient.callTool(toolName, args || {});
+      return { success: true, result };
+    } catch (err: any) {
+      return { success: false, error: String(err?.message || err) };
+    }
+  });
+
   /** Build OAuth authorize URL and launch browser. */
   ipcMain.handle('agent:login', async () => {
     try {

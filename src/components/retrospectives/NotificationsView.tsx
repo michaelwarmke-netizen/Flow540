@@ -105,6 +105,42 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
   const [isConfigSaving, setIsConfigSaving] = useState<boolean>(false);
   const [configSaveSuccess, setConfigSaveSuccess] = useState<boolean>(false);
 
+  const [activeToolForRun, setActiveToolForRun] = useState<string | null>(null);
+  const [toolRunArgs, setToolRunArgs] = useState<Record<string, string>>({});
+  const [executingToolName, setExecutingToolName] = useState<string | null>(null);
+  const [toolRunResults, setToolRunResults] = useState<Record<string, any>>({});
+
+  const handleExecuteTool = async (toolName: string) => {
+    setExecutingToolName(toolName);
+    try {
+      let parsedArgs: Record<string, unknown> = {};
+      const rawInput = toolRunArgs[toolName] || "";
+      if (rawInput.trim().startsWith("{")) {
+        parsedArgs = JSON.parse(rawInput);
+      } else if (rawInput.trim()) {
+        parsedArgs = { input: rawInput.trim() };
+      } else {
+        parsedArgs = {};
+      }
+
+      const api = (window as any).electronAPI;
+      if (api?.agentCallTool) {
+        const res = await api.agentCallTool(toolName, parsedArgs);
+        setToolRunResults((prev) => ({
+          ...prev,
+          [toolName]: res,
+        }));
+      }
+    } catch (err: any) {
+      setToolRunResults((prev) => ({
+        ...prev,
+        [toolName]: { success: false, error: err?.message || String(err) },
+      }));
+    } finally {
+      setExecutingToolName(null);
+    }
+  };
+
   useEffect(() => {
     const api = (window as any).electronAPI;
     if (api?.agentGetConfig) {
@@ -625,35 +661,140 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
                 No active external MCP tools connected. Connect an MCP server or verify OAuth login status.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {agentTools.map((t: any, idx: number) => (
-                  <div
-                    key={t.name || idx}
-                    className="p-3 rounded-lg bg-card border border-border/60 space-y-1.5 shadow-2xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-primary flex items-center gap-1.5">
-                        <Terminal size={12} /> {t.name}
-                      </span>
-                      <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                        MCP Tool
-                      </span>
+              <div className="space-y-3">
+                {agentTools.map((t: any, idx: number) => {
+                  const isExecuting = executingToolName === t.name;
+                  const isExpanded = activeToolForRun === t.name;
+                  const runResult = toolRunResults[t.name];
+
+                  return (
+                    <div
+                      key={t.name || idx}
+                      className="p-4 rounded-xl bg-card border border-border/60 space-y-3 shadow-2xs transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-primary flex items-center gap-1.5 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                            <Terminal size={12} /> {t.name}
+                          </span>
+                          <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-surface-2 text-muted-foreground border border-border/40">
+                            MCP Tool
+                          </span>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          variant={isExpanded ? "secondary" : "outline"}
+                          onClick={() => {
+                            setActiveToolForRun(isExpanded ? null : t.name);
+                            if (!toolRunArgs[t.name] && t.inputSchema?.properties) {
+                              const sampleObj: Record<string, string> = {};
+                              Object.keys(t.inputSchema.properties).forEach((k) => {
+                                sampleObj[k] = "";
+                              });
+                              setToolRunArgs((prev) => ({
+                                ...prev,
+                                [t.name]: JSON.stringify(sampleObj, null, 2),
+                              }));
+                            }
+                          }}
+                          className="gap-1.5 text-xs font-semibold"
+                        >
+                          <Play size={12} className="fill-current" />
+                          {isExpanded ? "Hide Executor" : "Run Tool"}
+                        </Button>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {t.description || "No description provided for this tool."}
+                      </p>
+
+                      {t.inputSchema && (
+                        <details className="text-[11px] text-muted-foreground">
+                          <summary className="cursor-pointer font-mono hover:text-foreground">
+                            View JSON Schema
+                          </summary>
+                          <pre className="mt-1 p-2 rounded bg-background border border-border/40 font-mono text-[10px] overflow-x-auto text-foreground/80">
+                            {JSON.stringify(t.inputSchema, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+
+                      {/* Expanded Interactive Execution Panel */}
+                      {isExpanded && (
+                        <div className="pt-3 border-t border-border/40 space-y-3 bg-surface-1/50 -mx-4 -mb-4 p-4 rounded-b-xl">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                              <span>Tool Input Arguments (JSON format)</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                Pass parameters matching the tool schema
+                              </span>
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={toolRunArgs[t.name] || "{}"}
+                              onChange={(e) =>
+                                setToolRunArgs((prev) => ({
+                                  ...prev,
+                                  [t.name]: e.target.value,
+                                }))
+                              }
+                              placeholder='{"channel": "C12345", "message": "Hello world"}'
+                              className="w-full p-2.5 rounded border border-border/60 bg-background text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleExecuteTool(t.name)}
+                              disabled={isExecuting}
+                              className="gap-1.5 text-xs font-semibold bg-primary hover:bg-primary/90"
+                            >
+                              {isExecuting ? (
+                                <>
+                                  <Loader2 size={13} className="animate-spin" />
+                                  Executing {t.name}...
+                                </>
+                              ) : (
+                                <>
+                                  <Play size={13} className="fill-current" />
+                                  Execute Tool Now
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          {/* Execution Result Display */}
+                          {runResult && (
+                            <div
+                              className={`p-3 rounded-lg border text-xs space-y-1.5 ${
+                                runResult.success
+                                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                  : "border-destructive/30 bg-destructive/10 text-destructive"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between font-semibold">
+                                <span className="flex items-center gap-1.5">
+                                  {runResult.success ? (
+                                    <CheckCircle2 size={14} />
+                                  ) : (
+                                    <AlertCircle size={14} />
+                                  )}
+                                  Execution Result: {runResult.success ? "Success" : "Error"}
+                                </span>
+                              </div>
+
+                              <pre className="p-2.5 rounded bg-background/80 border border-border/40 font-mono text-[11px] overflow-x-auto text-foreground max-h-60 whitespace-pre-wrap">
+                                {JSON.stringify(runResult.result || runResult.error || runResult, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {t.description || "No description provided."}
-                    </p>
-                    {t.inputSchema && (
-                      <details className="text-[11px] text-muted-foreground pt-1">
-                        <summary className="cursor-pointer font-mono hover:text-foreground">
-                          Schema Arguments
-                        </summary>
-                        <pre className="mt-1 p-2 rounded bg-background border border-border/40 font-mono text-[10px] overflow-x-auto">
-                          {JSON.stringify(t.inputSchema, null, 2)}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
