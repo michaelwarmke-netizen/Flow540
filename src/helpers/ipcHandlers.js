@@ -861,6 +861,13 @@ class IPCHandlers {
   }
 
   setupHandlers() {
+    try {
+      const { registerAgentIpcHandlers } = require("./agent/ipc/agentIpcHandlers.ts");
+      registerAgentIpcHandlers(ipcMain, shell);
+    } catch (err) {
+      console.warn("Could not register agent IPC handlers:", err);
+    }
+
     ipcMain.handle("window-minimize", () => {
       if (this.windowManager.controlPanelWindow) {
         this.windowManager.controlPanelWindow.minimize();

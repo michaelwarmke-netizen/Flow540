@@ -275,6 +275,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
     (callback) => () => callback()
   ),
 
+  // Agent framework methods
+  agentRun: (options) => ipcRenderer.invoke("agent:run", options),
+  agentCancel: (sessionId) => ipcRenderer.invoke("agent:cancel", sessionId),
+  agentListSessions: () => ipcRenderer.invoke("agent:list-sessions"),
+  agentListTools: () => ipcRenderer.invoke("agent:list-tools"),
+  agentLogin: () => ipcRenderer.invoke("agent:login"),
+  agentOauthCallback: (code, state) => ipcRenderer.invoke("agent:oauth-callback", code, state),
+  agentTokenInfo: () => ipcRenderer.invoke("agent:token-info"),
+  agentLogout: () => ipcRenderer.invoke("agent:logout"),
+  agentGetConfig: () => ipcRenderer.invoke("agent:get-config"),
+  agentUpdateConfig: (updates) => ipcRenderer.invoke("agent:update-config", updates),
+  onAgentStep: registerListener("agent:step"),
+
   // Vulkan GPU acceleration (whisper on AMD/Intel GPUs)
   getVulkanWhisperStatus: () => ipcRenderer.invoke("get-vulkan-whisper-status"),
   downloadVulkanWhisperBinary: () => ipcRenderer.invoke("download-vulkan-whisper-binary"),

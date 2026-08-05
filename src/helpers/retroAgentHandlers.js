@@ -3,12 +3,9 @@ const fs = require("fs");
 const { app } = require("electron");
 const { RetroRepository } = require("./retroRepository");
 const debugLogger = require("./debugLogger");
-const {
-  chunkTranscript,
-  deduplicateProposals,
-  parseRetroResponse,
-  buildRepairPrompt,
-} = require("./retroAnalysisUtils");
+const { chunkTranscript } = require("../utils/retroChunking.ts");
+const { deduplicateProposals } = require("../utils/retroDedup.ts");
+const { parseRetroResponse, buildRepairPrompt } = require("../utils/retroResponseParser.ts");
 
 class RetroAgentHandlers {
   constructor(databaseManager, broadcastToWindows) {

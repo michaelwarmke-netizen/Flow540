@@ -1,39 +1,43 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
-import { AGENT_CONFIG, AgentConfig } from '../config/agent-config';
-import { TokenService } from '../oauth/token.service';
-import {
+import type { AgentConfig } from '../config/agent-config.ts';
+import { loadAgentConfig } from '../config/agent-config.ts';
+import { Logger } from '../../logger.ts';
+import { NeedsLoginError, TokenService } from '../oauth/token.service.ts';
+import type {
   JsonRpcRequest,
   JsonRpcResponse,
   McpCallToolResult,
   McpInitializeResult,
-  MCP_PROTOCOL_VERSION,
   McpTool,
   McpToolsListResult,
-} from './mcp.types';
+} from './mcp.types.ts';
+import { MCP_PROTOCOL_VERSION } from './mcp.types.ts';
 
 /**
- * A thin MCP (Model Context Protocol) JSON-RPC client over stateless HTTP — exactly the
- * transport a hackathon team's agent uses. Every request carries a user-delegated OAuth
- * Bearer token from {@link TokenService} (the MCP server rejects M2M tokens).
+ * A thin MCP (Model Context Protocol) JSON-RPC client over HTTP.
+ * Every request carries a user-delegated OAuth Bearer token from {@link TokenService} if available.
  */
-@Injectable()
 export class McpClientService {
   private readonly logger = new Logger(McpClientService.name);
   private nextId = 1;
   private initialized = false;
+  private readonly config: AgentConfig;
+  private readonly tokens: TokenService;
 
   constructor(
-    @Inject(AGENT_CONFIG) private readonly config: AgentConfig,
-    private readonly tokens: TokenService,
-  ) {}
+    config: AgentConfig = loadAgentConfig(),
+    tokens: TokenService = new TokenService(config),
+  ) {
+    this.config = config;
+    this.tokens = tokens;
+  }
 
   /** MCP handshake. Safe to call repeatedly — only the first call hits the wire. */
   async initialize(): Promise<McpInitializeResult> {
     const result = await this.rpc<McpInitializeResult>('initialize', {
       protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: {},
-      clientInfo: { name: 'external-agent', version: '0.0.1' },
+      clientInfo: { name: 'openwhispr-agent', version: '1.7.6' },
     });
     // Best-effort "initialized" notification (no response expected).
     await this.notify('notifications/initialized').catch((err) =>
@@ -41,6 +45,11 @@ export class McpClientService {
     );
     this.initialized = true;
     return result;
+  }
+
+  /** Reset initialization status so the client re-handshakes against updated server URLs. */
+  reset(): void {
+    this.initialized = false;
   }
 
   async listTools(): Promise<McpTool[]> {
@@ -74,11 +83,29 @@ export class McpClientService {
   }
 
   private async headers(): Promise<Record<string, string>> {
-    const token = await this.tokens.getAccessToken();
-    return {
+    const reqHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
     };
+    try {
+      const token = await this.tokens.getAccessToken();
+      if (token) {
+        reqHeaders['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (err) {
+      if (err instanceof NeedsLoginError) {
+        const isLocal =
+          this.config.mcpServerUrl.includes('localhost') ||
+          this.config.mcpServerUrl.includes('127.0.0.1');
+        const hasOAuthClient = Boolean(this.config.oauth.clientId);
+
+        if (isLocal || !hasOAuthClient) {
+          this.logger.debug('No cached OAuth token; attempting unauthenticated request to local/unconfigured MCP server.');
+          return reqHeaders;
+        }
+      }
+      throw err;
+    }
+    return reqHeaders;
   }
 }

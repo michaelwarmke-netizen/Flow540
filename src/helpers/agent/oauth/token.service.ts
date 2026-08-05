@@ -1,12 +1,13 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
-import { AGENT_CONFIG, AgentConfig } from '../config/agent-config';
-import { codeChallengeS256, generateCodeVerifier, randomState } from './pkce.util';
-import { TokenStore } from './token-store';
+import type { AgentConfig } from '../config/agent-config.ts';
+import { loadAgentConfig } from '../config/agent-config.ts';
+import { Logger } from '../../logger.ts';
+import { codeChallengeS256, generateCodeVerifier, randomState } from './pkce.util.ts';
+import { TokenStore } from './token-store.ts';
 
-/** Thrown by getAccessToken() when there is no usable token and the user must run `agent login`. */
+/** Thrown by getAccessToken() when there is no usable token and the user must log in. */
 export class NeedsLoginError extends Error {
-  constructor(message = 'No cached credentials — run `agent login` to authorize the agent.') {
+  constructor(message = 'No cached credentials — authorize the agent to proceed.') {
     super(message);
     this.name = 'NeedsLoginError';
   }
@@ -25,7 +26,7 @@ interface TokenResponse {
   scope?: string;
 }
 
-/** Decoded, human-readable view of the access token's claims (for troubleshooting). */
+/** Decoded, human-readable view of the access token's claims. */
 export interface TokenInfo {
   scopes: string[];
   subject?: string;
@@ -39,8 +40,7 @@ export interface TokenInfo {
 }
 
 /**
- * Decode (WITHOUT verifying) the claims of an OAuth access-token JWT. Used only to show the caller
- * what scopes the token actually carries — the MCP server does the real signature verification.
+ * Decode (WITHOUT verifying) the claims of an OAuth access-token JWT.
  */
 export function decodeTokenInfo(accessToken: string): TokenInfo {
   const parts = accessToken.split('.');
@@ -74,29 +74,24 @@ export function decodeTokenInfo(accessToken: string): TokenInfo {
 }
 
 /**
- * Obtains and refreshes OAuth access tokens from the API Gateway.
- *
- * The MCP server only accepts USER-DELEGATED `authorization_code` tokens (it rejects
- * `client_credentials`). The primary path is therefore:
- *   1. `agent login` → buildAuthorizeUrl() → browser → /oauth/callback → handleCallback()
- *      (stores a refresh token via TokenStore).
- *   2. getAccessToken() serves a cached access token, transparently refreshing it.
- *
- * getClientCredentialsToken() is provided for direct API Gateway-proxied routes only — it will
- * NOT be accepted by the MCP server.
+ * Obtains and refreshes OAuth access tokens.
  */
-@Injectable()
 export class TokenService {
   private readonly logger = new Logger(TokenService.name);
   private endpoints?: OAuthEndpoints;
   private readonly verifiers = new Map<string, string>();
   private cachedAccessToken?: string;
   private cachedExpiresAt = 0;
+  private readonly config: AgentConfig;
+  private readonly store: TokenStore;
 
   constructor(
-    @Inject(AGENT_CONFIG) private readonly config: AgentConfig,
-    private readonly store: TokenStore,
-  ) {}
+    config: AgentConfig = loadAgentConfig(),
+    store: TokenStore = new TokenStore(config),
+  ) {
+    this.config = config;
+    this.store = store;
+  }
 
   /** Resolve the authorize/token endpoints, discovering from issuer metadata when not set. */
   async resolveEndpoints(): Promise<OAuthEndpoints> {
@@ -135,7 +130,7 @@ export class TokenService {
     return { url: `${authorizationEndpoint}?${params.toString()}`, state };
   }
 
-  /** Exchange the authorization code (from /oauth/callback) for tokens; persist the refresh token. */
+  /** Exchange the authorization code for tokens; persist the refresh token. */
   async handleCallback(code: string, state: string): Promise<void> {
     const verifier = this.verifiers.get(state);
     if (!verifier) throw new Error('Unknown or expired state — restart the login flow.');
@@ -156,7 +151,7 @@ export class TokenService {
     else this.logger.warn('No refresh_token returned — ensure `offline_access` is in OAUTH_SCOPES.');
   }
 
-  /** A valid user-delegated access token, refreshing transparently. Throws NeedsLoginError if none. */
+  /** A valid access token, refreshing transparently. Throws NeedsLoginError if none. */
   async getAccessToken(): Promise<string> {
     if (this.cachedAccessToken && Date.now() < this.cachedExpiresAt - 30_000) {
       return this.cachedAccessToken;
@@ -166,20 +161,13 @@ export class TokenService {
     return this.refresh(refreshToken);
   }
 
-  /**
-   * Decode the current (auto-refreshed) access token so callers can inspect the scopes actually
-   * granted. This is the same token every MCP tool call carries, so it is the source of truth when
-   * a tool reports a missing scope. Throws NeedsLoginError if there is no usable token.
-   */
+  /** Decode the current access token. */
   async getTokenInfo(): Promise<TokenInfo> {
     const token = await this.getAccessToken();
     return decodeTokenInfo(token);
   }
 
-  /**
-   * Forget the current session: drops the in-memory access token and clears the persisted refresh
-   * token. The next `getAccessToken()` will require a fresh `agent login` — used to switch users.
-   */
+  /** Clear session tokens. */
   clearTokens(): void {
     this.cachedAccessToken = undefined;
     this.cachedExpiresAt = 0;
@@ -197,15 +185,11 @@ export class TokenService {
     });
     const token = await this.postToken(tokenEndpoint, body);
     this.cacheAccess(token);
-    // Refresh-token rotation: persist the new one if the server returned it.
     if (token.refresh_token) this.store.writeRefreshToken(token.refresh_token);
     return token.access_token;
   }
 
-  /**
-   * A `client_credentials` (M2M) token — for DIRECT API Gateway-proxied routes only.
-   * The MCP server rejects these; use getAccessToken() (authorization_code) for MCP tools.
-   */
+  /** Client credentials (M2M) token for direct API Gateway routes. */
   async getClientCredentialsToken(): Promise<string> {
     this.assertClientConfigured();
     const { tokenEndpoint } = await this.resolveEndpoints();
@@ -234,7 +218,7 @@ export class TokenService {
   private assertClientConfigured(): void {
     if (!this.config.oauth.clientId || !this.config.oauth.clientSecret) {
       throw new Error(
-        'OAUTH_CLIENT_ID / OAUTH_CLIENT_SECRET are not set — copy .env.local.example to .env.local and fill them in.',
+        'OAUTH_CLIENT_ID / OAUTH_CLIENT_SECRET are not set — configure them in settings or environment.',
       );
     }
   }

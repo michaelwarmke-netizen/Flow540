@@ -1,7 +1,8 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { AGENT_CONFIG, AgentConfig } from '../config/agent-config';
+import type { AgentConfig } from '../config/agent-config.ts';
+import { loadAgentConfig } from '../config/agent-config.ts';
+import { Logger } from '../../logger.ts';
 
 export interface StoredTokens {
   refreshToken?: string;
@@ -9,14 +10,16 @@ export interface StoredTokens {
 }
 
 /**
- * Persists the OAuth refresh token to a gitignored JSON file so the one-time `agent login`
- * survives restarts. The access token is short-lived and kept only in memory (TokenService).
+ * Persists the OAuth refresh token to a JSON file so `agent login`
+ * survives restarts. Access tokens are kept in memory only.
  */
-@Injectable()
 export class TokenStore {
   private readonly logger = new Logger(TokenStore.name);
+  private readonly config: AgentConfig;
 
-  constructor(@Inject(AGENT_CONFIG) private readonly config: AgentConfig) {}
+  constructor(config: AgentConfig = loadAgentConfig()) {
+    this.config = config;
+  }
 
   read(): StoredTokens {
     const path = this.config.tokenStorePath;
