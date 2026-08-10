@@ -48,11 +48,11 @@ export class OAuthCallbackServer {
 
       if (pathname === '/oauth/callback' || pathname === '/callback') {
         const code = reqUrl.searchParams.get('code');
-        const state = reqUrl.searchParams.get('state');
+        const state = reqUrl.searchParams.get('state') || '';
 
-        if (!code || !state) {
+        if (!code) {
           res.writeHead(400, { 'Content-Type': 'text/html' });
-          res.end('<h1>Missing OAuth Parameters</h1><p>Expected <code>code</code> and <code>state</code> query parameters.</p>');
+          res.end('<h1>Missing OAuth Parameters</h1><p>Expected <code>code</code> query parameter in OAuth callback.</p>');
           return;
         }
 

@@ -150,12 +150,36 @@ export class TokenService {
 
   /** Exchange the authorization code for tokens; persist the refresh token. */
   async handleCallback(code: string, state: string): Promise<void> {
-    const entry = TokenService.sharedVerifiers.get(state);
+    let matchedState = state;
+    let entry = TokenService.sharedVerifiers.get(state);
+
+    if (!entry && state) {
+      try {
+        const decoded = decodeURIComponent(state);
+        entry = TokenService.sharedVerifiers.get(decoded);
+        if (entry) matchedState = decoded;
+      } catch (_) {}
+    }
+
+    // Fallback when state parameter was omitted or dropped by authorization proxy
+    if (!entry && !state) {
+      const now = Date.now();
+      for (const [key, val] of TokenService.sharedVerifiers.entries()) {
+        if (val.expiresAt > now) {
+          entry = val;
+          matchedState = key;
+          this.logger.warn(`OAuth callback state missing or mismatched; using active pending PKCE verifier.`);
+          break;
+        }
+      }
+    }
+
     if (!entry || entry.expiresAt < Date.now()) {
-      if (entry) TokenService.sharedVerifiers.delete(state);
+      if (matchedState) TokenService.sharedVerifiers.delete(matchedState);
       throw new Error('Unknown or expired state — restart the login flow.');
     }
-    TokenService.sharedVerifiers.delete(state);
+
+    TokenService.sharedVerifiers.delete(matchedState);
     const verifier = entry.verifier;
 
     const { tokenEndpoint } = await this.resolveEndpoints();
