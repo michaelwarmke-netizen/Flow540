@@ -197,17 +197,65 @@ export class TokenService {
     else this.logger.warn('No refresh_token returned — ensure `offline_access` is in OAUTH_SCOPES.');
   }
 
-  /** A valid access token, refreshing transparently. Throws NeedsLoginError if none. */
+  /** A valid access token, fetched directly from sidecar GET http://localhost:3540/oauth/print-info-raw. */
   async getAccessToken(): Promise<string> {
     if (this.config.oauth.manualAccessToken && this.config.oauth.manualAccessToken.trim().length > 0) {
       return this.config.oauth.manualAccessToken.trim();
     }
-    if (this.cachedAccessToken && Date.now() < this.cachedExpiresAt - 30_000) {
+    if (this.cachedAccessToken && Date.now() < this.cachedExpiresAt - 10_000) {
       return this.cachedAccessToken;
     }
+
+    const sidecarUrl = this.config.oauth.tokenUrl || 'http://localhost:3540/oauth/print-info-raw';
+    try {
+      const { data } = await axios.get(sidecarUrl, { timeout: 5000 });
+      const token = this.extractTokenFromSidecarResponse(data);
+      if (token) {
+        this.cachedAccessToken = token;
+        this.cachedExpiresAt = Date.now() + 60_000;
+        return token;
+      }
+    } catch (err: any) {
+      this.logger.error(`Error fetching token from sidecar at ${sidecarUrl}: ${err?.message || err}`);
+    }
+
+    // Fall back to stored refresh token if sidecar fetch fails
     const { refreshToken } = this.store.read();
-    if (!refreshToken) throw new NeedsLoginError();
-    return this.refresh(refreshToken);
+    if (refreshToken) {
+      return this.refresh(refreshToken);
+    }
+
+    throw new NeedsLoginError(`Unable to fetch token from sidecar endpoint (${sidecarUrl}). Make sure your sidecar is running.`);
+  }
+
+  private extractTokenFromSidecarResponse(data: unknown): string | null {
+    if (!data) return null;
+    if (typeof data === 'string') {
+      const trimmed = data.trim();
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          return this.extractTokenFromSidecarResponse(parsed);
+        } catch (_) {}
+      }
+      return trimmed;
+    }
+    if (typeof data === 'object') {
+      const obj = data as Record<string, any>;
+      const candidate =
+        obj.access_token ||
+        obj.accessToken ||
+        obj.token ||
+        obj.id_token ||
+        obj.idToken ||
+        obj.raw ||
+        obj.jwt ||
+        obj.text;
+      if (typeof candidate === 'string') {
+        return candidate.trim();
+      }
+    }
+    return null;
   }
 
   /** Decode the current access token. */
