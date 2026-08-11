@@ -42,4 +42,6 @@ export interface DispatchResult {
   status: 'sent' | 'failed' | 'skipped';
   error?: string;
   notificationRecordId?: string;
+  toolCallsCount?: number;
+  executedTools?: Array<{ toolName: string; args?: Record<string, unknown>; result?: unknown }>;
 }

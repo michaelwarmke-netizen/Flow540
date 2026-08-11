@@ -121,9 +121,31 @@ export class NotificationDispatcher {
         this.mcpClient
       );
 
+      const executedTools = agentResult.steps.flatMap((s) =>
+        s.toolCalls.map((tc) => {
+          const res = s.toolResults.find((r) => r.toolCallId === tc.toolCallId);
+          return {
+            toolName: tc.toolName,
+            args: tc.args,
+            result: res?.result,
+          };
+        })
+      );
+
+      const toolSummary =
+        executedTools.length > 0
+          ? `\n\n[MCP Tools Executed (${executedTools.length})]: ${executedTools.map((t) => t.toolName).join(', ')}`
+          : '\n\n[MCP Tools Executed (0)]: No MCP tools were invoked by the LLM.';
+
+      logger.info(
+        `Notification agent run completed for '${triggerKey}'. Executed ${executedTools.length} MCP tool call(s): [${
+          executedTools.map((t) => t.toolName).join(', ') || 'none'
+        }]`
+      );
+
       const content =
-        agentResult.text?.trim() ||
-        `[Agile Coach Notification] Automated dispatch for '${triggerKey}' executed.`;
+        (agentResult.text?.trim() || `[Agile Coach Notification] Automated dispatch for '${triggerKey}' executed.`) +
+        toolSummary;
 
       let notificationRecord: any = null;
       if (this.repo.saveSlackNotification) {
@@ -144,6 +166,8 @@ export class NotificationDispatcher {
         content,
         status: 'sent',
         notificationRecordId: notificationRecord?.id,
+        toolCallsCount: agentResult.toolCallsCount,
+        executedTools,
       };
     } catch (err: any) {
       const errorMsg = String(err?.message || err);

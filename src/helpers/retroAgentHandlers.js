@@ -617,7 +617,13 @@ class RetroAgentHandlers {
 
     if (result.notificationRecordId) {
       const savedRow = repo.db?.prepare("SELECT * FROM coach_slack_notifications WHERE id = ?")?.get(result.notificationRecordId);
-      if (savedRow) return savedRow;
+      if (savedRow) {
+        return {
+          ...savedRow,
+          tool_calls_count: result.toolCallsCount,
+          executed_tools: result.executedTools,
+        };
+      }
     }
 
     return {
@@ -627,6 +633,8 @@ class RetroAgentHandlers {
       message_type: messageType,
       message_content: result.content || `[Result] Status: ${result.status}`,
       status: result.status,
+      tool_calls_count: result.toolCallsCount,
+      executed_tools: result.executedTools,
     };
   }
 }
