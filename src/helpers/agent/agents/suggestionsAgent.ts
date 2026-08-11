@@ -118,6 +118,10 @@ export async function runSuggestionsAgent(
     }
   }
 
+  const targetModel = options.model || config.llm.model || 'gemini-2.5-flash';
+  const targetProvider = options.provider || config.llm.provider || 'gemini';
+  logger.info(`SuggestionsAgent processing input using model: "${targetModel}" (${targetProvider})`);
+
   try {
     const agentResult = await runAgent(
       {
@@ -133,12 +137,15 @@ export async function runSuggestionsAgent(
 
     const parsed = parseSuggestionsFromJson(agentResult.text);
 
+    const duration = Date.now() - startTime;
+    logger.info(`SuggestionsAgent completed in ${duration}ms — generated ${parsed.suggestions.length} suggestions`);
+
     return {
       success: true,
       suggestions: parsed.suggestions,
       summary: parsed.summary,
       rawText: agentResult.text,
-      durationMs: Date.now() - startTime,
+      durationMs: duration,
     };
   } catch (err: any) {
     logger.error(`SuggestionsAgent failed: ${err?.message || err}`);

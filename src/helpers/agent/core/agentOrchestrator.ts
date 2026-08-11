@@ -24,10 +24,11 @@ export async function runAgent(
 ): Promise<AgentRunResult> {
   const sessionId = options.sessionId ?? `session-${Date.now()}`;
   const model = resolveAgentModel(options, config);
+  const resolvedModelId = (model as any)?.modelId || options.model || config.llm.model || 'default';
   const maxSteps = options.maxSteps ?? config.llm.maxToolTurns ?? 8;
   const maxOutputTokens = options.maxOutputTokens ?? config.llm.maxOutputTokens ?? 4096;
 
-  logger.info(`Starting agent run [session: ${sessionId}] provider=${options.provider ?? config.llm.provider}`);
+  logger.info(`Starting agent run [session: ${sessionId}] provider=${options.provider ?? config.llm.provider} model=${resolvedModelId}`);
 
   // Discover & bridge MCP tools if client is present
   const tools = mcpClient ? await createAiSdkToolsFromMcp(mcpClient).catch((err) => {

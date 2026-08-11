@@ -99,6 +99,10 @@ export async function runActionItemAgent(
     if (options.context.sprintId) prompt += `- Sprint ID: ${options.context.sprintId}\n`;
   }
 
+  const targetModel = options.model || config.llm.model || 'gemini-2.5-flash';
+  const targetProvider = options.provider || config.llm.provider || 'gemini';
+  logger.info(`ActionItemAgent processing transcript (${options.transcript.length} chars) using model: "${targetModel}" (${targetProvider})`);
+
   try {
     const agentResult = await runAgent(
       {
@@ -114,12 +118,15 @@ export async function runActionItemAgent(
 
     const parsed = parseActionItemsFromJson(agentResult.text);
 
+    const duration = Date.now() - startTime;
+    logger.info(`ActionItemAgent completed in ${duration}ms — extracted ${parsed.actionItems.length} action items`);
+
     return {
       success: true,
       actionItems: parsed.actionItems,
       summary: parsed.summary,
       rawText: agentResult.text,
-      durationMs: Date.now() - startTime,
+      durationMs: duration,
     };
   } catch (err: any) {
     logger.error(`ActionItemAgent failed: ${err?.message || err}`);
