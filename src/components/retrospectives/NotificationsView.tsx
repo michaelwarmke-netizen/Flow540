@@ -34,6 +34,13 @@ interface NotificationsViewProps {
 
 export type DeliveryChannel = "slack" | "email";
 
+export type NotificationTriggerKey =
+  | "preRetroPreview"
+  | "ownerReminder"
+  | "postRetroSummary"
+  | "actionFollowup"
+  | "insightShare";
+
 export interface NotificationTypeSetting {
   enabled: boolean;
   channel: DeliveryChannel;
@@ -302,7 +309,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
     }
   };
 
-  const handleToggle = (key: keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">) => {
+  const handleToggle = (key: NotificationTriggerKey) => {
     setConfig((prev) => ({
       ...prev,
       [key]: {
@@ -313,7 +320,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
   };
 
   const handleChannelChange = (
-    key: keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">,
+    key: NotificationTriggerKey,
     channel: DeliveryChannel
   ) => {
     setConfig((prev) => ({
@@ -393,37 +400,43 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
     );
   }
 
-  const notificationTypes = [
+  const notificationTypes: {
+    key: NotificationTriggerKey;
+    title: string;
+    icon: JSX.Element;
+    description: string;
+    badge: string;
+  }[] = [
     {
-      key: "preRetroPreview" as keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">,
+      key: "preRetroPreview",
       title: "Pre-Retro Topic Preview",
       icon: <Zap size={16} className="text-amber-500" />,
       description: "Sends the coaching discussion agenda preview to team members prior to the retro meeting.",
       badge: "24h Before Retro",
     },
     {
-      key: "ownerReminder" as keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">,
+      key: "ownerReminder",
       title: "Action Item Owner Reminders",
       icon: <Users size={16} className="text-blue-500" />,
       description: "Sends reminders to team members who own open carried-over action items before retro.",
       badge: "Owner Notification",
     },
     {
-      key: "postRetroSummary" as keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">,
+      key: "postRetroSummary",
       title: "Post-Retro Personal Summaries",
       icon: <CheckCircle2 size={16} className="text-emerald-500" />,
       description: "Sends personalized summaries to participants with their assigned action items after retro analysis.",
       badge: "Post Analysis",
     },
     {
-      key: "actionFollowup" as keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">,
+      key: "actionFollowup",
       title: "Mid-Sprint Action Follow-Up",
       icon: <TrendingUp size={16} className="text-teal-500" />,
       description: "Sends mid-sprint progress check-ins to action owners regarding item completion.",
       badge: "Mid-Sprint",
     },
     {
-      key: "insightShare" as keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">,
+      key: "insightShare",
       title: "Coach Insight Share",
       icon: <Shield size={16} className="text-purple-500" />,
       description: "Posts coach-detected team patterns, blind spots, and positive trends to the team.",

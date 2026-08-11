@@ -401,9 +401,10 @@ class RetroAgentHandlers {
   }
 
   _resolveAgentModelSettings(settings = {}) {
-    const provider = settings.provider || settings.retroAnalystProvider || settings.cloudTranscriptionProvider || null;
-    const model = settings.model || settings.retroAnalystModel || settings.retroReasoningModel || null;
-    const apiKey = settings.apiKey || settings.geminiApiKey || settings.openaiApiKey || settings.anthropicApiKey || undefined;
+    const s = settings.settings || settings;
+    const provider = s.provider || s.retroAnalystProvider || s.cloudTranscriptionProvider || null;
+    const model = s.model || s.retroAnalystModel || s.retroReasoningModel || null;
+    const apiKey = s.apiKey || s.geminiApiKey || s.openaiApiKey || s.anthropicApiKey || undefined;
     debugLogger.info(`Resolved Agent model settings: provider="${provider}", model="${model}"`);
     return { provider, model, apiKey };
   }

@@ -274,8 +274,11 @@ export const retroClient = {
   listOutcomes: (retrospectiveId: string) => invoke<CoachTopicOutcome[]>("coach.listOutcomes", { retrospectiveId }),
   listInsights: (projectId?: string) => invoke<CoachInsight[]>("coach.listInsights", { projectId }),
   listSlackNotifications: (projectId?: string) => invoke<CoachSlackNotification[]>("coach.listSlackNotifications", { projectId }),
-  sendSlack: (data: { projectId?: string; recipientName: string; messageType: string; content: string }) =>
-    invoke<CoachSlackNotification>("coach.sendSlack", data),
+  sendSlack: (data: { projectId?: string; recipientName: string; messageType: string; content?: string; settings?: any }) =>
+    invoke<CoachSlackNotification>("coach.sendSlack", {
+      ...data,
+      settings: { ...getActiveSettingsPayload(), ...data.settings },
+    }),
 
   // Demo operations
   resetDemoData: () => invoke<{ success: boolean }>("demo.resetData", {}),
