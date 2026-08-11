@@ -55,9 +55,9 @@ const CONFIG_FILE_PATH = process.env.AGENT_CONFIG_FILE || `${process.env.HOME ||
 export function loadAgentConfig(env: NodeJS.ProcessEnv = process.env): AgentConfig {
   if (activeConfigSingleton) return activeConfigSingleton;
 
-  const provider = env.AGENT_LLM_PROVIDER ?? 'gemini';
+  const provider = env.AGENT_LLM_PROVIDER ?? '';
   const apiKey = env.AGENT_LLM_API_KEY ?? env.GEMINI_API_KEY ?? '';
-  const model = env.AGENT_LLM_MODEL ?? env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+  const model = env.AGENT_LLM_MODEL ?? env.GEMINI_MODEL ?? '';
   const baseUrl = env.AGENT_LLM_BASE_URL || undefined;
   const maxToolTurns = int(env.AGENT_MAX_TOOL_TURNS, 8);
   const maxOutputTokens = int(env.AGENT_MAX_OUTPUT_TOKENS, 4096);

@@ -3209,7 +3209,10 @@ class IPCHandlers {
         const { resolvePrompt } = await import("../config/prompts.js");
         const systemPrompt = prompt || resolvePrompt("cleanup", { agentName: null, language });
 
-        const geminiModel = model && model.startsWith("gemini") ? model : "gemini-2.5-flash";
+        if (!model) {
+          throw new Error("No Gemini model selected in settings. Please select a model in settings.");
+        }
+        const geminiModel = model;
         const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
         const base64Audio = Buffer.from(audioBuffer).toString("base64");
 
@@ -7673,7 +7676,10 @@ class IPCHandlers {
           if (!apiKey) throw new Error("No API key configured. Add your key in Settings.");
 
           if (provider === "gemini") {
-            const geminiModel = model && model.startsWith("gemini") ? model : "gemini-2.5-flash";
+            if (!model) {
+              throw new Error("No Gemini model selected in settings. Please select a model in settings.");
+            }
+            const geminiModel = model;
             const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
             const ext = path.extname(realByok).toLowerCase().replace(".", "");
             const contentType = AUDIO_MIME_TYPES[ext] || "audio/mpeg";

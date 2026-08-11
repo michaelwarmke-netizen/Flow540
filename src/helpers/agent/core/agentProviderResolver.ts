@@ -21,10 +21,14 @@ export function resolveAgentModel(
   options: ResolveModelOptions = {},
   config: AgentConfig = loadAgentConfig(),
 ): LanguageModel {
-  const provider = (options.provider || config.llm.provider || 'gemini').toLowerCase();
-  const modelId = options.model || config.llm.model || 'gemini-2.5-flash';
+  const provider = (options.provider || config.llm.provider || '').toLowerCase();
+  const modelId = options.model || config.llm.model || '';
   const apiKey = options.apiKey || config.llm.apiKey || '';
   const baseUrl = options.baseUrl || config.llm.baseUrl;
+
+  if (!modelId) {
+    throw new Error('No AI model selected or configured in settings. Please select an AI model in settings.');
+  }
 
   switch (provider) {
     case 'google':

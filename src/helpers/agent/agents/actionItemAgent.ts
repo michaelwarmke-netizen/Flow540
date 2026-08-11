@@ -99,9 +99,21 @@ export async function runActionItemAgent(
     if (options.context.sprintId) prompt += `- Sprint ID: ${options.context.sprintId}\n`;
   }
 
-  const targetModel = options.model || config.llm.model || 'gemini-2.5-flash';
-  const targetProvider = options.provider || config.llm.provider || 'gemini';
-  logger.info(`ActionItemAgent processing transcript (${options.transcript.length} chars) using model: "${targetModel}" (${targetProvider})`);
+  const targetModel = options.model || config.llm.model;
+  const targetProvider = options.provider || config.llm.provider;
+
+  if (!targetModel) {
+    return {
+      success: false,
+      actionItems: [],
+      summary: 'Action item extraction failed.',
+      rawText: '',
+      error: 'No AI model selected or configured in settings. Please select an AI model in settings.',
+      durationMs: Date.now() - startTime,
+    };
+  }
+
+  logger.info(`ActionItemAgent processing transcript (${options.transcript.length} chars) using model: "${targetModel}" (${targetProvider || 'default'})`);
 
   try {
     const agentResult = await runAgent(

@@ -118,9 +118,21 @@ export async function runSuggestionsAgent(
     }
   }
 
-  const targetModel = options.model || config.llm.model || 'gemini-2.5-flash';
-  const targetProvider = options.provider || config.llm.provider || 'gemini';
-  logger.info(`SuggestionsAgent processing input using model: "${targetModel}" (${targetProvider})`);
+  const targetModel = options.model || config.llm.model;
+  const targetProvider = options.provider || config.llm.provider;
+
+  if (!targetModel) {
+    return {
+      success: false,
+      suggestions: [],
+      summary: 'No AI model configured or selected in settings.',
+      rawText: '',
+      error: 'No AI model selected or configured in settings. Please select an AI model in settings.',
+      durationMs: Date.now() - startTime,
+    };
+  }
+
+  logger.info(`SuggestionsAgent processing input using model: "${targetModel}" (${targetProvider || 'default'})`);
 
   try {
     const agentResult = await runAgent(
