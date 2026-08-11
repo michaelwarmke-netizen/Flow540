@@ -168,7 +168,7 @@ function getActiveSettingsPayload() {
   try {
     const s = useSettingsStore.getState();
     const provider = s.cloudTranscriptionProvider || s.retroAnalystProvider || "gemini";
-    const model = s.cloudTranscriptionModel || s.geminiModel || s.retroAnalystModel || s.cleanupModel || "gemini-2.5-flash";
+    const model = s.retroAnalystModel || s.retroReasoningModel || s.cloudTranscriptionModel || s.cleanupModel || "gemini-2.5-flash";
     const apiKey = s.geminiApiKey || s.openaiApiKey || s.anthropicApiKey || s.groqApiKey || "";
     return { provider, model, apiKey };
   } catch {
