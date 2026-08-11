@@ -1,3 +1,5 @@
+import { useSettingsStore } from "../../stores/settingsStore";
+
 export interface SprintSnapshot {
   id: string;
   name: string;
@@ -162,6 +164,18 @@ export interface CoachSlackNotification {
   status: string;
 }
 
+function getActiveSettingsPayload() {
+  try {
+    const s = useSettingsStore.getState();
+    const provider = s.cloudTranscriptionProvider || s.retroAnalystProvider || "gemini";
+    const model = s.cloudTranscriptionModel || s.geminiModel || s.retroAnalystModel || s.cleanupModel || "gemini-2.5-flash";
+    const apiKey = s.geminiApiKey || s.openaiApiKey || s.anthropicApiKey || s.groqApiKey || "";
+    return { provider, model, apiKey };
+  } catch {
+    return {};
+  }
+}
+
 export const retroClient = {
   // Sprint operations
   listSprints: () => invoke<SprintSnapshot[]>("sprints.list"),
@@ -184,8 +198,13 @@ export const retroClient = {
   listRetros: () => invoke<Retrospective[]>("retro.list"),
 
   // Analysis operations
-  describeModel: (payload?: any) => invoke<ModelDescribeResult>("models.describe", payload),
-  runAnalysis: (retrospectiveId: string) => invoke<RetroProposal[]>("analysis.run", { retrospectiveId }),
+  describeModel: (payload?: any) =>
+    invoke<ModelDescribeResult>("models.describe", { ...getActiveSettingsPayload(), ...payload }),
+  runAnalysis: (retrospectiveId: string, settings?: any) =>
+    invoke<RetroProposal[]>("analysis.run", {
+      retrospectiveId,
+      settings: { ...getActiveSettingsPayload(), ...settings },
+    }),
   cancelAnalysis: (retrospectiveId: string) =>
     window.electronAPI?.retro?.cancelAnalysis(retrospectiveId),
   onAnalysisProgress: (callback: (data: RetroAnalysisProgress) => void) =>
@@ -240,8 +259,12 @@ export const retroClient = {
   deleteProject: (id: string) => invoke<boolean>("projects.delete", { id }),
 
   // Coach operations
-  suggestCoachTopics: (projectId?: string, sprintId?: string) =>
-    invoke<CoachTopic[]>("coach.suggestTopics", { projectId, sprintId }),
+  suggestCoachTopics: (projectId?: string, sprintId?: string, settings?: any) =>
+    invoke<CoachTopic[]>("coach.suggestTopics", {
+      projectId,
+      sprintId,
+      settings: { ...getActiveSettingsPayload(), ...settings },
+    }),
   listTopics: (projectId?: string, sprintId?: string) =>
     invoke<CoachTopic[]>("coach.listTopics", { projectId, sprintId }),
   updateTopic: (id: string, updates: Partial<CoachTopic>) =>

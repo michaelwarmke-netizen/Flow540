@@ -253,6 +253,7 @@ class RetroAgentHandlers {
     emitProgress("analyzing", 0, 2);
 
     const meetingOwner = retro.meeting_owner || settings.meetingOwner || settings.uploaderIdentity || "Unassigned";
+    const modelOpts = this._resolveAgentModelSettings(settings);
 
     const context = {
       meetingTitle: retro.title || `Retrospective ${retrospectiveId}`,
@@ -277,8 +278,8 @@ class RetroAgentHandlers {
     const actionResult = await runActionItemAgent({
       transcript: retro.transcript || "",
       context,
-      provider: settings.provider,
-      model: settings.model,
+      provider: modelOpts.provider,
+      model: modelOpts.model,
     });
 
     if (!actionResult.success) {
@@ -291,8 +292,8 @@ class RetroAgentHandlers {
     const coachResult = await runSuggestionsAgent({
       transcript: retro.transcript || "",
       context,
-      provider: settings.provider,
-      model: settings.model,
+      provider: modelOpts.provider,
+      model: modelOpts.model,
     });
 
     if (!coachResult.success) {
@@ -350,10 +351,18 @@ class RetroAgentHandlers {
     return saved;
   }
 
+  _resolveAgentModelSettings(settings = {}) {
+    const provider = settings.provider || settings.cloudTranscriptionProvider || settings.retroAnalystProvider || "gemini";
+    const model = settings.model || settings.cloudTranscriptionModel || settings.geminiModel || settings.retroAnalystModel || settings.cleanupModel || "gemini-2.5-flash";
+    const apiKey = settings.apiKey || settings.geminiApiKey || settings.openaiApiKey || settings.anthropicApiKey || undefined;
+    return { provider, model, apiKey };
+  }
+
   async suggestCoachTopics(projectId, sprintId, settings = {}) {
     const repo = this._getRetroRepository();
     const sprint = await repo.getSprintSnapshot(sprintId);
     const existingActions = await repo.listTrackedActions({ sprintId });
+    const modelOpts = this._resolveAgentModelSettings(settings);
 
     const defaultTopics = [
       {
@@ -406,8 +415,8 @@ class RetroAgentHandlers {
 
       const agentResult = await runSuggestionsAgent({
         context,
-        provider: settings.provider,
-        model: settings.model,
+        provider: modelOpts.provider,
+        model: modelOpts.model,
       });
 
       if (agentResult.success && agentResult.suggestions && agentResult.suggestions.length > 0) {
