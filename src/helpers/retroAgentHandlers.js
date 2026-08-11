@@ -6,6 +6,8 @@ const debugLogger = require("./debugLogger");
 const { chunkTranscript } = require("../utils/retroChunking.ts");
 const { deduplicateProposals } = require("../utils/retroDedup.ts");
 const { parseRetroResponse, buildRepairPrompt } = require("../utils/retroResponseParser.ts");
+const { runActionItemAgent } = require("./agent/agents/actionItemAgent.ts");
+const { runSuggestionsAgent } = require("./agent/agents/suggestionsAgent.ts");
 
 class RetroAgentHandlers {
   constructor(databaseManager, broadcastToWindows) {
@@ -237,14 +239,6 @@ class RetroAgentHandlers {
     if (!retro) throw new Error("Retrospective not found");
 
     const sprint = await repo.getSprintSnapshot(retro.sprint_id);
-    const modelStatus = await this.describeRetroModel(settings);
-
-    if (!modelStatus.available || !modelStatus.modelId) {
-      throw new Error("No local reasoning model selected. Retrospective analysis requires a locally installed model.");
-    }
-
-    const localBridge = require("../services/localReasoningBridge").default;
-    localBridge.clearCancelledAnalysis(retrospectiveId);
 
     await repo.updateRetrospective(retrospectiveId, { processing_state: "analyzing" });
 
@@ -256,100 +250,85 @@ class RetroAgentHandlers {
       this.broadcastToWindows("retro:analysis-progress", data);
     };
 
-    const chunks = chunkTranscript(retro.transcript, modelStatus.contextLength);
-    const totalChunks = chunks.length || 1;
+    emitProgress("analyzing", 0, 2);
 
-    emitProgress("analyzing", 0, totalChunks);
+    const meetingOwner = retro.meeting_owner || settings.meetingOwner || settings.uploaderIdentity || "Unassigned";
+
+    const context = {
+      meetingTitle: retro.title || `Retrospective ${retrospectiveId}`,
+      sprintId: retro.sprint_id,
+      projectContext: sprint ? `Sprint: ${sprint.name}` : undefined,
+      sprintMetrics: sprint
+        ? {
+            name: sprint.name,
+            committedPoints: sprint.committed_points,
+            completedPoints: sprint.completed_points,
+            velocity: sprint.velocity,
+            completedIssues: sprint.completed_issues,
+            totalIssues: sprint.total_issues,
+            blockedIssues: sprint.blocked_issues,
+            burndownTrend: sprint.burndown_trend,
+            blockers: sprint.blockers,
+          }
+        : undefined,
+    };
+
+    // Agent 1: Run ActionItemAgent to extract explicit commitments
+    const actionResult = await runActionItemAgent({
+      transcript: retro.transcript || "",
+      context,
+      provider: settings.provider,
+      model: settings.model,
+    });
+
+    if (!actionResult.success) {
+      debugLogger.warn("ActionItemAgent extraction failed", { error: actionResult.error });
+    }
+
+    emitProgress("analyzing", 1, 2);
+
+    // Agent 2: Run SuggestionsAgent to generate suggestions & team improvements
+    const coachResult = await runSuggestionsAgent({
+      transcript: retro.transcript || "",
+      context,
+      provider: settings.provider,
+      model: settings.model,
+    });
+
+    if (!coachResult.success) {
+      debugLogger.warn("SuggestionsAgent analysis failed", { error: coachResult.error });
+    }
+
+    emitProgress("parsing", 2, 2);
 
     const rawParsedItems = [];
-    const sprintContext = sprint
-      ? `SPRINT CONTEXT:\nSprint: ${sprint.name}\nCommitted: ${sprint.committed_points} pts | Completed: ${sprint.completed_points} pts | Velocity: ${sprint.velocity} pts\nIssues: ${sprint.completed_issues}/${sprint.total_issues} completed (${sprint.blocked_issues} blocked)\nBurndown Trend: ${sprint.burndown_trend}\nBlockers: ${sprint.blockers || "None"}\n`
-      : "";
 
-    const meetingOwner = retro.meeting_owner || settings.meetingOwner || settings.uploaderIdentity || "";
-    const meetingOwnerText = meetingOwner ? `Default Meeting Owner / Uploader: "${meetingOwner}"\n` : "";
-
-    const systemPrompt =
-      `You are an expert Agile coach analyzing a retrospective transcript.\n` +
-      sprintContext +
-      meetingOwnerText +
-      `Extract explicitly stated action items and suggest agile-coach improvements.\n` +
-      `For every item, estimate effort ("estimateValue" as a number and "estimateUnit" as "minutes", "hours", or "days") and assign an "owner".\n` +
-      `Assign a transcript-supported owner if a specific participant is identified in the transcript; otherwise set "owner" to the default meeting owner: "${meetingOwner || "Unassigned"}". Do not invent named participants not mentioned in the transcript.\n` +
-      `Return ONLY a JSON object with this exact schema (max 5 explicitActions and 5 coachSuggestions):\n` +
-      `{\n  "explicitActions": [{ "title": "...", "description": "...", "owner": "...", "estimateValue": 1, "estimateUnit": "hours" }],\n  "coachSuggestions": [{ "title": "...", "description": "...", "basis": "...", "owner": "...", "estimateValue": 1, "estimateUnit": "hours" }]\n}\n` +
-      `Do not include any prose, commentary, or markdown formatting outside JSON.`;
-
-    for (let i = 0; i < chunks.length; i++) {
-      if (localBridge.isAnalysisCancelled(retrospectiveId)) {
-        emitProgress("completed", totalChunks, totalChunks);
-        return [];
-      }
-
-      emitProgress("analyzing", i + 1, totalChunks);
-
-      const chunk = chunks[i];
-      let output;
-      try {
-        output = await localBridge.processText(chunk.text, modelStatus.modelId, {
-          priority: "batch",
-          retrospectiveId,
-          systemPrompt,
-          temperature: 0.0,
-          maxTokens: 2048,
-          timeoutMs: 120000,
+    // Map Action Items
+    if (actionResult.success && actionResult.actionItems) {
+      for (const item of actionResult.actionItems) {
+        rawParsedItems.push({
+          title: item.task,
+          description: item.quote || item.task,
+          owner: item.assignee && item.assignee !== "Unassigned" ? item.assignee : meetingOwner,
+          estimateValue: 1,
+          estimateUnit: "hours",
+          source: "explicit",
         });
-      } catch (err) {
-        if (err.message && err.message.includes("cancelled")) {
-          emitProgress("completed", totalChunks, totalChunks);
-          return [];
-        }
-        debugLogger.error("Retro chunk inference failed", { chunkIndex: i, error: err.message });
-        continue;
       }
+    }
 
-      let parsed = parseRetroResponse(output);
-
-      if (parsed.unparsed) {
-        emitProgress("parsing", i + 1, totalChunks);
-        try {
-          const repairPrompt = buildRepairPrompt(output);
-          const repairedOutput = await localBridge.processText(repairPrompt, modelStatus.modelId, {
-            priority: "batch",
-            retrospectiveId,
-            systemPrompt: "Return only valid JSON.",
-            temperature: 0.0,
-            maxTokens: 2048,
-            timeoutMs: 120000,
-          });
-          parsed = parseRetroResponse(repairedOutput);
-        } catch (repairErr) {
-          debugLogger.warn("Repair retry failed", { chunkIndex: i, error: repairErr.message });
-        }
-      }
-
-      if (!parsed.unparsed) {
-        for (const item of parsed.explicitActions) {
-          rawParsedItems.push({
-            title: item.title,
-            description: item.description,
-            owner: item.owner || meetingOwner,
-            estimateValue: item.estimateValue,
-            estimateUnit: item.estimateUnit,
-            source: "explicit",
-          });
-        }
-        for (const item of parsed.coachSuggestions) {
-          rawParsedItems.push({
-            title: item.title,
-            description: item.description,
-            basis: item.basis,
-            owner: item.owner || meetingOwner,
-            estimateValue: item.estimateValue,
-            estimateUnit: item.estimateUnit,
-            source: "coach",
-          });
-        }
+    // Map Coach Suggestions
+    if (coachResult.success && coachResult.suggestions) {
+      for (const item of coachResult.suggestions) {
+        rawParsedItems.push({
+          title: item.title,
+          description: item.description,
+          basis: item.basis,
+          owner: item.owner && item.owner !== "Unassigned" ? item.owner : meetingOwner,
+          estimateValue: 1,
+          estimateUnit: "hours",
+          source: "coach",
+        });
       }
     }
 
@@ -365,13 +344,8 @@ class RetroAgentHandlers {
     const nextRunCount = (retro.analysis_run_count || 0) + 1;
     const saved = await repo.saveProposals(retrospectiveId, deduped, nextRunCount);
 
-    emitProgress("completed", totalChunks, totalChunks);
-
-    try {
-      await this.evaluateTopicCoverage(retrospectiveId, retro.sprint_id, retro.transcript, modelStatus);
-    } catch (covErr) {
-      debugLogger.warn("Topic coverage evaluation error", { error: covErr.message });
-    }
+    await repo.updateRetrospective(retrospectiveId, { processing_state: "completed" });
+    emitProgress("completed", 2, 2);
 
     return saved;
   }
@@ -380,14 +354,6 @@ class RetroAgentHandlers {
     const repo = this._getRetroRepository();
     const sprint = await repo.getSprintSnapshot(sprintId);
     const existingActions = await repo.listTrackedActions({ sprintId });
-    const modelStatus = await this.describeRetroModel(settings);
-
-    const contextText =
-      `Sprint: ${sprint ? sprint.name : sprintId || "Current"}\n` +
-      `Committed Points: ${sprint ? sprint.committed_points : 0} | Completed: ${sprint ? sprint.completed_points : 0} | Velocity: ${sprint ? sprint.velocity : 0}\n` +
-      `Blockers: ${sprint ? sprint.blockers : "None"}\n` +
-      `Burndown Trend: ${sprint ? sprint.burndown_trend : "on_track"}\n` +
-      `Open Tracked Actions (${existingActions.length}): ${existingActions.map((a) => a.title).join(", ") || "None"}\n`;
 
     const defaultTopics = [
       {
@@ -419,53 +385,47 @@ class RetroAgentHandlers {
       },
     ];
 
-    if (!modelStatus.available || !modelStatus.modelId) {
-      await repo.saveTopics(defaultTopics);
-      return repo.listTopics(projectId, sprintId);
-    }
-
     try {
-      const localBridge = require("../services/localReasoningBridge").default;
-      const prompt =
-        `You are an expert Agile Coach preparing for an upcoming team retrospective.\n` +
-        `Based on the team's sprint metrics and open action items below, suggest 3 to 5 targeted discussion topics for the team's retrospective meeting.\n\n` +
-        `${contextText}\n\n` +
-        `Return ONLY a JSON object with this exact schema:\n` +
-        `{\n` +
-        `  "topics": [\n` +
-        `    {\n` +
-        `      "title": "Topic title",\n` +
-        `      "rationale": "Explanation based on metrics or blockers",\n` +
-        `      "category": "metric_driven",\n` +
-        `      "priority": 1\n` +
-        `    }\n` +
-        `  ]\n` +
-        `}\n` +
-        `Category must be one of: "metric_driven", "carryover", "blind_spot", "best_practice", "recurring". Priority is 1 to 5. Return valid JSON only with no prose.`;
+      const context = {
+        meetingTitle: `Retrospective Agenda Planning for Sprint ${sprint?.name || sprintId || 'Current'}`,
+        sprintMetrics: sprint
+          ? {
+              name: sprint.name,
+              committedPoints: sprint.committed_points,
+              completedPoints: sprint.completed_points,
+              velocity: sprint.velocity,
+              completedIssues: sprint.completed_issues,
+              totalIssues: sprint.total_issues,
+              blockedIssues: sprint.blocked_issues,
+              burndownTrend: sprint.burndown_trend,
+              blockers: sprint.blockers,
+            }
+          : undefined,
+        previousActionItems: existingActions.map((a) => a.title),
+      };
 
-      const output = await localBridge.processText(prompt, modelStatus.modelId, {
-        priority: "batch",
-        temperature: 0.2,
-        maxTokens: 2048,
-        timeoutMs: 60000,
+      const agentResult = await runSuggestionsAgent({
+        context,
+        provider: settings.provider,
+        model: settings.model,
       });
 
-      const cleanJson = output.replace(/```json/gi, "").replace(/```/g, "").trim();
-      const parsed = JSON.parse(cleanJson);
-      const generated = (parsed.topics || []).map((t) => ({
-        project_id: projectId || "proj-default-gen-eng",
-        sprint_id: sprintId,
-        title: t.title,
-        rationale: t.rationale || "",
-        category: t.category || "metric_driven",
-        priority: Number(t.priority) || 3,
-        state: "suggested",
-      }));
-
-      const finalTopics = generated.length > 0 ? generated : defaultTopics;
-      await repo.saveTopics(finalTopics);
+      if (agentResult.success && agentResult.suggestions && agentResult.suggestions.length > 0) {
+        const generatedTopics = agentResult.suggestions.map((s, idx) => ({
+          project_id: projectId || "proj-default-gen-eng",
+          sprint_id: sprintId,
+          title: s.title,
+          rationale: s.basis || s.description,
+          category: s.category || "metric_driven",
+          priority: idx + 1,
+          state: "suggested",
+        }));
+        await repo.saveTopics(generatedTopics);
+      } else {
+        await repo.saveTopics(defaultTopics);
+      }
     } catch (err) {
-      debugLogger.warn("Failed LLM topic suggestion, fallback to defaults", { error: err.message });
+      debugLogger.warn("Failed SuggestionsAgent topic generation; falling back to default topics", { error: err.message });
       await repo.saveTopics(defaultTopics);
     }
 

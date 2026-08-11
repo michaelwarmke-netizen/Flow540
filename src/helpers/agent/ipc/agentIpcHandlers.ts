@@ -2,6 +2,8 @@ import { AgentSessionManager } from '../core/agentSessionManager.ts';
 import type { AgentRunOptions } from '../core/agentTypes.ts';
 import { getAgentConfig, updateAgentConfig } from '../config/agent-config.ts';
 import { Logger } from '../../logger.ts';
+import { runActionItemAgent, type ActionItemExtractionOptions } from '../agents/actionItemAgent.ts';
+import { runSuggestionsAgent, type SuggestionsAgentOptions } from '../agents/suggestionsAgent.ts';
 
 const logger = new Logger('AgentIpcHandlers');
 let sessionManagerInstance: AgentSessionManager | null = null;
@@ -82,6 +84,38 @@ export function registerAgentIpcHandlers(ipcMain: any, shell?: any): void {
       return { success: true, token };
     } catch (err: any) {
       return { success: false, error: String(err?.message || err) };
+    }
+  });
+
+  /** Extract action items directly from a transcript using ActionItemAgent. */
+  ipcMain.handle('agent:extract-action-items', async (_event: any, options: ActionItemExtractionOptions) => {
+    try {
+      return await runActionItemAgent(options, mcpClient);
+    } catch (err: any) {
+      return {
+        success: false,
+        actionItems: [],
+        summary: 'Extraction failed',
+        rawText: '',
+        error: String(err?.message || err),
+        durationMs: 0,
+      };
+    }
+  });
+
+  /** Run Suggestions Agent analysis directly on a transcript or sprint metrics. */
+  ipcMain.handle('agent:run-suggestions', async (_event: any, options: SuggestionsAgentOptions) => {
+    try {
+      return await runSuggestionsAgent(options, mcpClient);
+    } catch (err: any) {
+      return {
+        success: false,
+        suggestions: [],
+        summary: 'Suggestions analysis failed',
+        rawText: '',
+        error: String(err?.message || err),
+        durationMs: 0,
+      };
     }
   });
 

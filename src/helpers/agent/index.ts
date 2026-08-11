@@ -16,3 +16,4 @@ export * from './core/agentProviderResolver.ts';
 export * from './core/agentOrchestrator.ts';
 export * from './core/agentSessionManager.ts';
 export * from './ipc/agentIpcHandlers.ts';
+export * from './agents/agents.ts';
