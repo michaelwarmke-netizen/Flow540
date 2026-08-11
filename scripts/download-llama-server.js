@@ -167,20 +167,34 @@ function getEntriesForPlatformArch(platformArch) {
 
 async function main() {
   console.log(`\n[llama-server] Using pinned version: ${LLAMA_CPP_TAG}`);
-  const release = await getRelease();
+  const args = parseArgs();
+  fs.mkdirSync(BIN_DIR, { recursive: true });
+
+  if (args.isCurrent && !args.isForce) {
+    const entries = getEntriesForPlatformArch(args.platformArch);
+    if (entries.length > 0) {
+      const allExist = entries.every(([_, config]) => {
+        const outputPath = path.join(BIN_DIR, config.outputName);
+        return fs.existsSync(outputPath);
+      });
+      if (allExist) {
+        console.log(`[llama-server] Binaries already exist for ${args.platformArch} (skipping network check)`);
+        return;
+      }
+    }
+  }
+
+  const release = await getRelease().catch((err) => {
+    console.warn(`[llama-server] Could not fetch release from ${LLAMA_CPP_REPO}: ${err?.message || err}`);
+    return null;
+  });
 
   if (!release) {
-    console.error(`[llama-server] Could not fetch release from ${LLAMA_CPP_REPO}`);
-    console.log(`\nMake sure release exists: https://github.com/${LLAMA_CPP_REPO}/releases`);
-    process.exitCode = 1;
+    console.warn(`[llama-server] Skipping download (release unavailable or offline)`);
     return;
   }
 
   console.log(`\nDownloading llama-server binaries (${release.tag})...\n`);
-
-  fs.mkdirSync(BIN_DIR, { recursive: true });
-
-  const args = parseArgs();
 
   if (args.isCurrent) {
     const entries = getEntriesForPlatformArch(args.platformArch);
