@@ -21,6 +21,7 @@ const { transcribeWithTinfoil } = require("./tinfoilTranscription");
 const AudioStorageManager = require("./audioStorage");
 const { RetroRepository } = require("./retroRepository");
 const { RetroAgentHandlers } = require("./retroAgentHandlers");
+const { SprintFollowupScheduler } = require("./sprintFollowupScheduler");
 const { chunkTranscript } = require("../utils/retroChunking.ts");
 const { parseRetroResponse, buildRepairPrompt } = require("../utils/retroResponseParser.ts");
 const { deduplicateProposals } = require("../utils/retroDedup.ts");
@@ -452,6 +453,8 @@ class IPCHandlers {
     this._setupTextEditMonitor();
     this._setupAudioCleanup();
     this._logDetectedGpus();
+    this.sprintFollowupScheduler = new SprintFollowupScheduler(() => this._getRetroAgentHandlers());
+    this.sprintFollowupScheduler.start();
     this.setupHandlers();
 
     if (this.whisperManager?.serverManager) {
@@ -553,9 +556,15 @@ class IPCHandlers {
 
   _getRetroAgentHandlers() {
     if (!this._retroAgentHandlers) {
+      let mcpClient;
+      try {
+        const { getAgentSessionManager } = require("./agent/ipc/agentIpcHandlers.ts");
+        mcpClient = getAgentSessionManager().getMcpClient();
+      } catch (_) {}
       this._retroAgentHandlers = new RetroAgentHandlers(
         this.databaseManager,
-        (channel, data) => this.broadcastToWindows(channel, data)
+        (channel, data) => this.broadcastToWindows(channel, data),
+        mcpClient
       );
     }
     return this._retroAgentHandlers;

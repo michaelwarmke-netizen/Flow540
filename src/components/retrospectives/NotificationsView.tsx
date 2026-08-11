@@ -42,6 +42,7 @@ export interface NotificationTypeSetting {
 export interface NotificationConfig {
   senderEmail?: string;
   teamEmails?: string;
+  actionFollowupDaysAfterSprintStart?: number;
   preRetroPreview: NotificationTypeSetting;
   ownerReminder: NotificationTypeSetting;
   postRetroSummary: NotificationTypeSetting;
@@ -57,6 +58,7 @@ const DEFAULT_TYPE_SETTING: NotificationTypeSetting = {
 const DEFAULT_CONFIG: NotificationConfig = {
   senderEmail: "",
   teamEmails: "",
+  actionFollowupDaysAfterSprintStart: 7,
   preRetroPreview: { enabled: true, channel: "slack" },
   ownerReminder: { enabled: true, channel: "slack" },
   postRetroSummary: { enabled: true, channel: "slack" },
@@ -83,6 +85,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
   const [slackChannelId, setSlackChannelId] = useState<string>("");
   const [senderEmail, setSenderEmail] = useState<string>("");
   const [teamEmails, setTeamEmails] = useState<string>("");
+  const [actionFollowupDays, setActionFollowupDays] = useState<number>(7);
 
   const [config, setConfig] = useState<NotificationConfig>(DEFAULT_CONFIG);
   const [notifications, setNotifications] = useState<CoachSlackNotification[]>([]);
@@ -269,6 +272,10 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
           parsedConfig = {
             senderEmail: raw.senderEmail || "",
             teamEmails: raw.teamEmails || "",
+            actionFollowupDaysAfterSprintStart:
+              typeof raw.actionFollowupDaysAfterSprintStart === "number"
+                ? raw.actionFollowupDaysAfterSprintStart
+                : 7,
             preRetroPreview: normalizeSetting(raw.preRetroPreview),
             ownerReminder: normalizeSetting(raw.ownerReminder),
             postRetroSummary: normalizeSetting(raw.postRetroSummary),
@@ -280,6 +287,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
 
       setSenderEmail(parsedConfig.senderEmail || "");
       setTeamEmails(parsedConfig.teamEmails || "");
+      setActionFollowupDays(parsedConfig.actionFollowupDaysAfterSprintStart ?? 7);
       setConfig(parsedConfig);
       loadSlackLogs(currentProject.id);
     }
@@ -358,6 +366,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
       ...config,
       senderEmail,
       teamEmails,
+      actionFollowupDaysAfterSprintStart: actionFollowupDays,
     };
 
     try {
@@ -518,6 +527,23 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
               />
               <span className="text-[10px] text-muted-foreground block">
                 Email address used as 'From' sender for email notifications.
+              </span>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              <label className="font-medium text-foreground flex items-center gap-1">
+                <TrendingUp size={13} className="text-muted-foreground" /> Mid-Sprint Follow-Up Schedule (Days Offset)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={actionFollowupDays}
+                onChange={(e) => setActionFollowupDays(parseInt(e.target.value, 10) || 7)}
+                className="w-full h-8 px-2.5 rounded border border-border/60 bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+              />
+              <span className="text-[10px] text-muted-foreground block">
+                Days after sprint start when mid-sprint action follow-up triggers automatically.
               </span>
             </div>
           </div>

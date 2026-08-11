@@ -10,10 +10,30 @@ const { runActionItemAgent } = require("./agent/agents/actionItemAgent.ts");
 const { runSuggestionsAgent } = require("./agent/agents/suggestionsAgent.ts");
 
 class RetroAgentHandlers {
-  constructor(databaseManager, broadcastToWindows) {
+  constructor(databaseManager, broadcastToWindows, mcpClient) {
     this.databaseManager = databaseManager;
     this.broadcastToWindows = broadcastToWindows || (() => {});
+    this._mcpClient = mcpClient || null;
     this._retroRepository = null;
+  }
+
+  _getMcpClient() {
+    if (!this._mcpClient) {
+      try {
+        const { getAgentSessionManager } = require("./agent/ipc/agentIpcHandlers.ts");
+        this._mcpClient = getAgentSessionManager().getMcpClient();
+      } catch (err) {
+        debugLogger.warn("Could not obtain McpClientService", { error: err.message });
+      }
+    }
+    return this._mcpClient;
+  }
+
+  _getNotificationDispatcher() {
+    const { NotificationDispatcher } = require("./agent/notifications/notificationDispatcher.ts");
+    const repo = this._getRetroRepository();
+    const mcpClient = this._getMcpClient();
+    return new NotificationDispatcher(repo, mcpClient);
   }
 
   _getRetroRepository() {
@@ -59,6 +79,7 @@ class RetroAgentHandlers {
       "coach.listInsights",
       "coach.listSlackNotifications",
       "coach.sendSlack",
+      "coach.runMidSprintFollowup",
       "demo.resetData",
     ]);
 
@@ -148,6 +169,8 @@ class RetroAgentHandlers {
         return repo.listSlackNotifications(payload?.projectId);
       case "coach.sendSlack":
         return this.sendSlackNotification(payload);
+      case "coach.runMidSprintFollowup":
+        return this.runMidSprintFollowup(payload.projectId, payload.sprintId);
       case "demo.resetData":
         return repo.resetDemoData();
       default:
@@ -348,6 +371,31 @@ class RetroAgentHandlers {
     await repo.updateRetrospective(retrospectiveId, { processing_state: "completed" });
     emitProgress("completed", 2, 2);
 
+    // --- Autonomous Notification Trigger Dispatch ---
+    try {
+      if (retro.project_id) {
+        const dispatcher = this._getNotificationDispatcher();
+        const insights = await repo.listInsights(retro.project_id);
+
+        // 1. Dispatch postRetroSummary
+        await dispatcher.dispatch("postRetroSummary", {
+          projectId: retro.project_id,
+          proposals: saved.map((p) => ({ title: p.title, owner: p.owner, description: p.description })),
+          retroTitle: retro.title,
+          sprintName: sprint?.name,
+        });
+
+        // 2. Dispatch insightShare
+        await dispatcher.dispatch("insightShare", {
+          projectId: retro.project_id,
+          insights: insights,
+          sprintName: sprint?.name,
+        });
+      }
+    } catch (dispatchErr) {
+      debugLogger.warn("Post-analysis notification dispatch failed (non-fatal)", { error: dispatchErr.message });
+    }
+
     return saved;
   }
 
@@ -439,6 +487,30 @@ class RetroAgentHandlers {
       await repo.saveTopics(defaultTopics);
     }
 
+    // --- Autonomous Notification Trigger Dispatch ---
+    try {
+      const targetProjectId = projectId || "proj-default-gen-eng";
+      const topics = await repo.listTopics(targetProjectId, sprintId);
+      const carriedActions = existingActions.filter((a) => a.status !== "completed");
+      const dispatcher = this._getNotificationDispatcher();
+
+      // 1. Dispatch preRetroPreview
+      await dispatcher.dispatch("preRetroPreview", {
+        projectId: targetProjectId,
+        topics: topics.map((t) => ({ title: t.title, rationale: t.rationale, state: t.state })),
+        sprintName: sprint?.name,
+      });
+
+      // 2. Dispatch ownerReminder
+      await dispatcher.dispatch("ownerReminder", {
+        projectId: targetProjectId,
+        actionItems: carriedActions.map((a) => ({ title: a.title, owner: a.owner, status: a.status })),
+        sprintName: sprint?.name,
+      });
+    } catch (dispatchErr) {
+      debugLogger.warn("Pre-retro notification dispatch failed (non-fatal)", { error: dispatchErr.message });
+    }
+
     return repo.listTopics(projectId, sprintId);
   }
 
@@ -496,42 +568,64 @@ class RetroAgentHandlers {
     return repo.saveTopicOutcomes(outcomes);
   }
 
+  async runMidSprintFollowup(projectId, sprintId) {
+    const repo = this._getRetroRepository();
+    const targetProjectId = projectId || "proj-default-gen-eng";
+    const actions = await repo.listTrackedActions({ sprintId });
+    const openActions = actions.filter((a) => a.status !== "completed");
+
+    const dispatcher = this._getNotificationDispatcher();
+    const result = await dispatcher.dispatch("actionFollowup", {
+      projectId: targetProjectId,
+      actionItems: openActions.map((a) => ({ title: a.title, owner: a.owner, status: a.status })),
+      sprintName: sprintId,
+    });
+
+    return { dispatched: result.status === "sent", result };
+  }
+
   async sendSlackNotification(payload) {
     const repo = this._getRetroRepository();
-    const { projectId, recipientName, messageType, content } = payload;
+    const { projectId, messageType } = payload;
+    const targetProjectId = projectId || "proj-default-gen-eng";
 
-    let finalContent = content;
-    if (!finalContent || finalContent.startsWith("[TEST")) {
-      switch (messageType) {
-        case "preRetroPreview":
-          finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n📋 *Pre-Retro Discussion Agenda Preview*\nTarget Channel/Recipient: ${recipientName || "Team Channel"}\n\nCoach Suggested Agenda Topics for upcoming Retrospective:\n• ⚡ *PR Size Optimization & Fast Review SLAs* (Turnaround SLA < 24h)\n• 📈 *Sustaining 100% Completion Velocity* (Zero-blocker sprint analysis)\n\n👉 Team members: Please review and mark accepted topics before the retro kick-off meeting!`;
-          break;
-        case "ownerReminder":
-          finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n⏰ *Action Item Owner Reminder*\nTarget Recipient: ${recipientName || "Action Item Owners"}\n\nReminder for assigned retro action items:\n• 📌 *Create GitHub PR template with 300 LOC guidelines* (Marcus Vance — 2 hours est.)\n• 📌 *Draft initial PR review response time SLA* (Sarah Jenkins — 1 day est.)\n\nPlease check in status before the sprint boundary!`;
-          break;
-        case "postRetroSummary":
-          finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n📊 *Post-Retro Personal Summary*\nTarget Recipient: ${recipientName || "Team Members"}\n\n• Retrospective session completed successfully.\n• 3 new action items created and synced to Jira (AGILE-1004, AGILE-1005).\n• Accepted coach discussion topics recorded for team velocity playbook.`;
-          break;
-        case "actionFollowup":
-          finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n🔄 *Mid-Sprint Action Item Follow-Up*\nTarget Recipient: ${recipientName || "Team Channel"}\n\n• Carried-over action items status check: 2 of 3 carried items resolved!\n• Remaining carried item: *Setup automated performance regression benchmark check in CI* (Jordan Smith)`;
-          break;
-        case "insightShare":
-          finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n💡 *Agile Coach Team Insight Share*\nTarget Channel: ${recipientName || "Team Channel"}\n\n• *Detected Pattern*: PR review delays on API gateway reviews appeared as blockers in 3 of the last 4 sprints.\n• *Impact*: Team velocity improves by +24% when code review SLA is explicitly discussed.`;
-          break;
-        default:
-          finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n📢 *Agile Coach Notification*\nTarget Recipient: ${recipientName || "Team"}\n\nAutomated dispatch for trigger '${messageType}' delivered successfully.`;
-          break;
+    const dispatcher = this._getNotificationDispatcher();
+
+    const context = { projectId: targetProjectId };
+
+    try {
+      if (messageType === "preRetroPreview") {
+        const topics = await repo.listTopics(targetProjectId);
+        context.topics = topics.map((t) => ({ title: t.title, rationale: t.rationale, state: t.state }));
+      } else if (messageType === "ownerReminder" || messageType === "actionFollowup") {
+        const actions = await repo.listTrackedActions();
+        context.actionItems = actions.map((a) => ({ title: a.title, owner: a.owner, status: a.status }));
+      } else if (messageType === "postRetroSummary") {
+        const proposals = await repo.listProposals();
+        context.proposals = proposals.map((p) => ({ title: p.title, owner: p.owner, description: p.description }));
+      } else if (messageType === "insightShare") {
+        const insights = await repo.listInsights(targetProjectId);
+        context.insights = insights;
       }
+    } catch (ctxErr) {
+      debugLogger.warn("Context fetch error for test dispatch", { error: ctxErr.message });
     }
 
-    return repo.saveSlackNotification({
-      project_id: projectId || "proj-default-gen-eng",
-      recipient_name: recipientName || "Team Channel",
-      recipient_slack_id: payload.recipientSlackId || "",
+    const result = await dispatcher.dispatch(messageType, context, { throwOnError: true });
+
+    if (result.notificationRecordId) {
+      const savedRow = repo.db?.prepare("SELECT * FROM coach_slack_notifications WHERE id = ?")?.get(result.notificationRecordId);
+      if (savedRow) return savedRow;
+    }
+
+    return {
+      id: "dispatch-" + Date.now(),
+      project_id: targetProjectId,
+      recipient_name: result.recipientName || "Team Channel",
       message_type: messageType,
-      message_content: finalContent,
-      status: "sent",
-    });
+      message_content: result.content || `[Result] Status: ${result.status}`,
+      status: result.status,
+    };
   }
 }
 
