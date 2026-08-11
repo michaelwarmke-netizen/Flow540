@@ -1,4 +1,4 @@
-import { generateText, stepCountIs } from 'ai';
+import { ToolLoopAgent, stepCountIs } from 'ai';
 import type { AgentConfig } from '../config/agent-config.ts';
 import { loadAgentConfig } from '../config/agent-config.ts';
 import { Logger } from '../../logger.ts';
@@ -13,7 +13,7 @@ const DEFAULT_SYSTEM_PROMPT =
 const logger = new Logger('AgentOrchestrator');
 
 /**
- * Runs an agentic tool-calling loop using Vercel AI SDK's `generateText()`.
+ * Runs an agentic tool-calling loop using Vercel AI SDK's `ToolLoopAgent`.
  * Automatically discovers MCP tools, executes tool steps up to `maxSteps`,
  * and returns the aggregated text, steps, and tool usage metrics.
  */
@@ -36,14 +36,11 @@ export async function runAgent(
     return {};
   }) : {};
 
-  const result = await generateText({
+  const agent = new ToolLoopAgent({
     model,
-    system: options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
-    prompt: options.prompt,
+    instructions: options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
     tools,
     stopWhen: stepCountIs(maxSteps),
-    maxOutputTokens,
-    abortSignal: options.abortSignal,
     onStepFinish(step: any) {
       const mappedStep: AgentStepResult = {
         stepType: step.stepType || 'continue',
@@ -71,6 +68,12 @@ export async function runAgent(
       };
       options.onStepFinish?.(mappedStep);
     },
+  });
+
+  const result = await agent.generateText({
+    prompt: options.prompt,
+    maxOutputTokens,
+    abortSignal: options.abortSignal,
   });
 
   const steps: AgentStepResult[] = (result.steps || []).map((s: any) => ({
