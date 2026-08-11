@@ -44,7 +44,6 @@ export interface NotificationConfig {
   teamEmails?: string;
   preRetroPreview: NotificationTypeSetting;
   ownerReminder: NotificationTypeSetting;
-  metricAlert: NotificationTypeSetting;
   postRetroSummary: NotificationTypeSetting;
   actionFollowup: NotificationTypeSetting;
   insightShare: NotificationTypeSetting;
@@ -60,7 +59,6 @@ const DEFAULT_CONFIG: NotificationConfig = {
   teamEmails: "",
   preRetroPreview: { enabled: true, channel: "slack" },
   ownerReminder: { enabled: true, channel: "slack" },
-  metricAlert: { enabled: true, channel: "slack" },
   postRetroSummary: { enabled: true, channel: "slack" },
   actionFollowup: { enabled: true, channel: "slack" },
   insightShare: { enabled: true, channel: "slack" },
@@ -273,7 +271,6 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
             teamEmails: raw.teamEmails || "",
             preRetroPreview: normalizeSetting(raw.preRetroPreview),
             ownerReminder: normalizeSetting(raw.ownerReminder),
-            metricAlert: normalizeSetting(raw.metricAlert),
             postRetroSummary: normalizeSetting(raw.postRetroSummary),
             actionFollowup: normalizeSetting(raw.actionFollowup),
             insightShare: normalizeSetting(raw.insightShare),
@@ -401,13 +398,6 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
       icon: <Users size={16} className="text-blue-500" />,
       description: "Sends reminders to team members who own open carried-over action items before retro.",
       badge: "Owner Notification",
-    },
-    {
-      key: "metricAlert" as keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">,
-      title: "Sprint Metric Alerts",
-      icon: <AlertCircle size={16} className="text-destructive" />,
-      description: "Sends alerts when sprint velocity or blocker count deviates significantly from baseline.",
-      badge: "Sprint End",
     },
     {
       key: "postRetroSummary" as keyof Omit<NotificationConfig, "senderEmail" | "teamEmails">,

@@ -509,9 +509,6 @@ class RetroAgentHandlers {
         case "ownerReminder":
           finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n⏰ *Action Item Owner Reminder*\nTarget Recipient: ${recipientName || "Action Item Owners"}\n\nReminder for assigned retro action items:\n• 📌 *Create GitHub PR template with 300 LOC guidelines* (Marcus Vance — 2 hours est.)\n• 📌 *Draft initial PR review response time SLA* (Sarah Jenkins — 1 day est.)\n\nPlease check in status before the sprint boundary!`;
           break;
-        case "metricAlert":
-          finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n🚨 *Sprint Metric Alert*\nTarget Channel: ${recipientName || "Engineering Leads"}\n\n• *Burndown Trend*: Behind trend (29/40 completed points)\n• *Active Blockers*: 3 PR review bottlenecks on API Gateway\n\n💡 *Coach Recommendation*: Focus engineering effort on clearing API Gateway code reviews today to recover sprint commitment.`;
-          break;
         case "postRetroSummary":
           finalContent = `🤖 [Agile Coach Agent via MCP Dispatch]\n\n📊 *Post-Retro Personal Summary*\nTarget Recipient: ${recipientName || "Team Members"}\n\n• Retrospective session completed successfully.\n• 3 new action items created and synced to Jira (AGILE-1004, AGILE-1005).\n• Accepted coach discussion topics recorded for team velocity playbook.`;
           break;
