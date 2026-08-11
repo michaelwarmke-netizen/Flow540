@@ -197,7 +197,7 @@ export class TokenService {
     else this.logger.warn('No refresh_token returned — ensure `offline_access` is in OAUTH_SCOPES.');
   }
 
-  /** A valid access token, fetched directly from sidecar GET http://localhost:3540/oauth/print-info-raw. */
+  /** A valid access token, fetched directly from sidecar GET http://localhost:3540/oauth/token-info-raw. */
   async getAccessToken(): Promise<string> {
     if (this.config.oauth.manualAccessToken && this.config.oauth.manualAccessToken.trim().length > 0) {
       return this.config.oauth.manualAccessToken.trim();
@@ -206,7 +206,7 @@ export class TokenService {
       return this.cachedAccessToken;
     }
 
-    const sidecarUrl = this.config.oauth.tokenUrl || 'http://localhost:3540/oauth/print-info-raw';
+    const sidecarUrl = this.config.oauth.tokenUrl || 'http://localhost:3540/oauth/token-info-raw';
     try {
       const { data } = await axios.get(sidecarUrl, { timeout: 5000 });
       const token = this.extractTokenFromSidecarResponse(data);

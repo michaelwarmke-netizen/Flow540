@@ -77,7 +77,7 @@ export function registerAgentIpcHandlers(ipcMain: any, shell?: any): void {
     }
   });
 
-  /** Fetch token from sidecar endpoint (http://localhost:3540/oauth/print-info-raw). */
+  /** Fetch token from sidecar endpoint (http://localhost:3540/oauth/token-info-raw). */
   ipcMain.handle('agent:login', async () => {
     try {
       const token = await tokenService.getAccessToken();
