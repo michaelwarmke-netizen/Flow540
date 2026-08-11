@@ -400,8 +400,11 @@ class RetroAgentHandlers {
   }
 
   _resolveAgentModelSettings(settings = {}) {
-    const provider = settings.provider || settings.cloudTranscriptionProvider || settings.retroAnalystProvider || null;
-    const model = settings.model || settings.retroAnalystModel || settings.retroReasoningModel || settings.cloudTranscriptionModel || settings.cleanupModel || null;
+    const provider = settings.provider || settings.retroAnalystProvider || settings.cloudTranscriptionProvider || null;
+    let model = settings.model || settings.retroAnalystModel || settings.retroReasoningModel || null;
+    if (model === "gemini-2.5-flash") model = "gemini-2.0-flash";
+    if (model === "gemini-2.5-flash-lite") model = "gemini-2.0-flash-lite";
+    if (model === "gemini-2.5-pro") model = "gemini-1.5-pro";
     const apiKey = settings.apiKey || settings.geminiApiKey || settings.openaiApiKey || settings.anthropicApiKey || undefined;
     debugLogger.info(`Resolved Agent model settings: provider="${provider}", model="${model}"`);
     return { provider, model, apiKey };

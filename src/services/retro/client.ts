@@ -167,8 +167,8 @@ export interface CoachSlackNotification {
 function getActiveSettingsPayload() {
   try {
     const s = useSettingsStore.getState();
-    const provider = s.cloudTranscriptionProvider || s.retroAnalystProvider || "";
-    const model = s.retroAnalystModel || s.retroReasoningModel || s.cloudTranscriptionModel || s.cleanupModel || "";
+    const provider = s.retroAnalystProvider || s.cloudTranscriptionProvider || "";
+    const model = s.retroAnalystModel || s.retroReasoningModel || "";
     const apiKey = s.geminiApiKey || s.openaiApiKey || s.anthropicApiKey || s.groqApiKey || "";
     return { provider, model, apiKey };
   } catch {

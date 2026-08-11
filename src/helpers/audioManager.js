@@ -2602,7 +2602,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       if (provider === "xai") return "grok-stt";
       if (provider === "mistral") return "voxtral-mini-latest";
       if (provider === "corti") return "corti-transcribe";
-      if (provider === "gemini") return "gemini-2.5-flash";
+      if (provider === "gemini") return "gemini-2.0-flash";
       return "gpt-4o-mini-transcribe";
     } catch (error) {
       return "gpt-4o-mini-transcribe";
