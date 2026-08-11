@@ -41,6 +41,7 @@ export async function runAgent(
     instructions: options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
     tools,
     stopWhen: stepCountIs(maxSteps),
+    maxOutputTokens,
     onStepFinish(step: any) {
       const mappedStep: AgentStepResult = {
         stepType: step.stepType || 'continue',
@@ -70,9 +71,8 @@ export async function runAgent(
     },
   });
 
-  const result = await agent.generateText({
+  const result = await agent.generate({
     prompt: options.prompt,
-    maxOutputTokens,
     abortSignal: options.abortSignal,
   });
 
