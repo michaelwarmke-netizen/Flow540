@@ -17,23 +17,33 @@ export interface ResolveModelOptions {
  * Resolves a Vercel AI SDK {@link LanguageModel} based on provided options or {@link AgentConfig}.
  * Supports Google Gemini, OpenAI, Anthropic, Groq, and any local OpenAI-compatible endpoint (llama.cpp, Ollama, MLX).
  */
-export function normalizeModelId(modelId: string): string {
-  if (!modelId) return '';
-  if (modelId === 'gemini-2.5-flash') return 'gemini-2.0-flash';
-  if (modelId === 'gemini-2.5-flash-lite') return 'gemini-2.0-flash-lite';
-  if (modelId === 'gemini-2.5-pro') return 'gemini-1.5-pro';
-  if (modelId === 'google/gemini-2.5-flash') return 'google/gemini-2.0-flash-001';
-  return modelId;
-}
-
 export function resolveAgentModel(
   options: ResolveModelOptions = {},
   config: AgentConfig = loadAgentConfig(),
 ): LanguageModel {
-  const provider = (options.provider || config.llm.provider || '').toLowerCase();
-  const rawModelId = options.model || config.llm.model || '';
-  const modelId = normalizeModelId(rawModelId);
-  const apiKey = options.apiKey || config.llm.apiKey || '';
+  const provider = (
+    options.provider ||
+    config.llm.provider ||
+    process.env.retroAnalystProvider ||
+    process.env.cloudTranscriptionProvider ||
+    ''
+  ).toLowerCase();
+  const modelId =
+    options.model ||
+    config.llm.model ||
+    process.env.retroAnalystModel ||
+    process.env.retroReasoningModel ||
+    process.env.cloudTranscriptionModel ||
+    process.env.cleanupModel ||
+    '';
+  const apiKey =
+    options.apiKey ||
+    config.llm.apiKey ||
+    process.env.GEMINI_API_KEY ||
+    process.env.OPENAI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.GROQ_API_KEY ||
+    '';
   const baseUrl = options.baseUrl || config.llm.baseUrl;
 
   if (!modelId) {

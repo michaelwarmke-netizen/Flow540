@@ -583,8 +583,8 @@
           "descriptionKey": "models.descriptions.cloud.gemini_gemini_3_flash_preview"
         },
         {
-          "id": "gemini-2.5-flash-lite",
-          "name": "Gemini 2.5 Flash Lite",
+          "id": "gemini-2.0-flash-lite",
+          "name": "Gemini 2.0 Flash Lite",
           "description": "Lowest latency and cost",
           "descriptionKey": "models.descriptions.cloud.gemini_gemini_2_5_flash_lite"
         },

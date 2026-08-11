@@ -55,9 +55,28 @@ const CONFIG_FILE_PATH = process.env.AGENT_CONFIG_FILE || `${process.env.HOME ||
 export function loadAgentConfig(env: NodeJS.ProcessEnv = process.env): AgentConfig {
   if (activeConfigSingleton) return activeConfigSingleton;
 
-  const provider = env.AGENT_LLM_PROVIDER ?? '';
-  const apiKey = env.AGENT_LLM_API_KEY ?? env.GEMINI_API_KEY ?? '';
-  const model = env.AGENT_LLM_MODEL ?? env.GEMINI_MODEL ?? '';
+  const provider =
+    env.AGENT_LLM_PROVIDER ||
+    env.retroAnalystProvider ||
+    env.cloudTranscriptionProvider ||
+    env.cleanupProvider ||
+    '';
+  const apiKey =
+    env.AGENT_LLM_API_KEY ||
+    env.GEMINI_API_KEY ||
+    env.OPENAI_API_KEY ||
+    env.ANTHROPIC_API_KEY ||
+    env.GROQ_API_KEY ||
+    env.retroAnalystCustomApiKey ||
+    '';
+  const model =
+    env.AGENT_LLM_MODEL ||
+    env.GEMINI_MODEL ||
+    env.retroAnalystModel ||
+    env.retroReasoningModel ||
+    env.cloudTranscriptionModel ||
+    env.cleanupModel ||
+    '';
   const baseUrl = env.AGENT_LLM_BASE_URL || undefined;
   const maxToolTurns = int(env.AGENT_MAX_TOOL_TURNS, 8);
   const maxOutputTokens = int(env.AGENT_MAX_OUTPUT_TOKENS, 4096);

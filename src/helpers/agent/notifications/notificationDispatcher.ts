@@ -16,13 +16,16 @@ const logger = new Logger('NotificationDispatcher');
 export class NotificationDispatcher {
   private repo: any;
   private mcpClient?: McpClientService;
+  private modelOpts?: { provider?: string; model?: string; apiKey?: string };
 
   constructor(
     repo: any,
-    mcpClient?: McpClientService
+    mcpClient?: McpClientService,
+    modelOpts?: { provider?: string; model?: string; apiKey?: string }
   ) {
     this.repo = repo;
     this.mcpClient = mcpClient;
+    this.modelOpts = modelOpts;
   }
 
   /**
@@ -110,6 +113,9 @@ export class NotificationDispatcher {
         {
           prompt,
           systemPrompt: NOTIFICATION_AGENT_SYSTEM_PROMPT,
+          provider: this.modelOpts?.provider,
+          model: this.modelOpts?.model,
+          apiKey: this.modelOpts?.apiKey,
           maxSteps: 4,
         },
         this.mcpClient

@@ -29,11 +29,12 @@ class RetroAgentHandlers {
     return this._mcpClient;
   }
 
-  _getNotificationDispatcher() {
+  _getNotificationDispatcher(settings = {}) {
     const { NotificationDispatcher } = require("./agent/notifications/notificationDispatcher.ts");
     const repo = this._getRetroRepository();
     const mcpClient = this._getMcpClient();
-    return new NotificationDispatcher(repo, mcpClient);
+    const modelOpts = this._resolveAgentModelSettings(settings);
+    return new NotificationDispatcher(repo, mcpClient, modelOpts);
   }
 
   _getRetroRepository() {
@@ -374,7 +375,7 @@ class RetroAgentHandlers {
     // --- Autonomous Notification Trigger Dispatch ---
     try {
       if (retro.project_id) {
-        const dispatcher = this._getNotificationDispatcher();
+        const dispatcher = this._getNotificationDispatcher(settings);
         const insights = await repo.listInsights(retro.project_id);
 
         // 1. Dispatch postRetroSummary
@@ -401,10 +402,7 @@ class RetroAgentHandlers {
 
   _resolveAgentModelSettings(settings = {}) {
     const provider = settings.provider || settings.retroAnalystProvider || settings.cloudTranscriptionProvider || null;
-    let model = settings.model || settings.retroAnalystModel || settings.retroReasoningModel || null;
-    if (model === "gemini-2.5-flash") model = "gemini-2.0-flash";
-    if (model === "gemini-2.5-flash-lite") model = "gemini-2.0-flash-lite";
-    if (model === "gemini-2.5-pro") model = "gemini-1.5-pro";
+    const model = settings.model || settings.retroAnalystModel || settings.retroReasoningModel || null;
     const apiKey = settings.apiKey || settings.geminiApiKey || settings.openaiApiKey || settings.anthropicApiKey || undefined;
     debugLogger.info(`Resolved Agent model settings: provider="${provider}", model="${model}"`);
     return { provider, model, apiKey };
@@ -495,7 +493,7 @@ class RetroAgentHandlers {
       const targetProjectId = projectId || "proj-default-gen-eng";
       const topics = await repo.listTopics(targetProjectId, sprintId);
       const carriedActions = existingActions.filter((a) => a.status !== "completed");
-      const dispatcher = this._getNotificationDispatcher();
+      const dispatcher = this._getNotificationDispatcher(settings);
 
       // 1. Dispatch preRetroPreview
       await dispatcher.dispatch("preRetroPreview", {
@@ -592,7 +590,7 @@ class RetroAgentHandlers {
     const { projectId, messageType } = payload;
     const targetProjectId = projectId || "proj-default-gen-eng";
 
-    const dispatcher = this._getNotificationDispatcher();
+    const dispatcher = this._getNotificationDispatcher(payload);
 
     const context = { projectId: targetProjectId };
 
