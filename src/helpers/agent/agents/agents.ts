@@ -5,3 +5,4 @@
 
 export * from './actionItemAgent.ts';
 export * from './suggestionsAgent.ts';
+export * from './topicCoverageAgent.ts';
