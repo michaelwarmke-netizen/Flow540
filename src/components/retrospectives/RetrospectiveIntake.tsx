@@ -267,6 +267,7 @@ export default function RetrospectiveIntake({
     fileArray.forEach((file) => {
       const isTxt = file.name.toLowerCase().endsWith(".txt");
       const isVtt = file.name.toLowerCase().endsWith(".vtt");
+      const isMd = file.name.toLowerCase().endsWith(".md");
       const isAudio = file.type.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name);
 
       if (isAudio) {
@@ -277,7 +278,7 @@ export default function RetrospectiveIntake({
           setSourceKind("audio");
           setTranscriptText(`[Audio File: ${file.name} - Ready for analysis]`);
         }
-      } else if (isTxt || isVtt) {
+      } else if (isTxt || isVtt || isMd) {
         const reader = new FileReader();
         reader.onload = (e) => {
           const raw = e.target?.result as string;
@@ -291,7 +292,7 @@ export default function RetrospectiveIntake({
             const wordCount = cleanText.trim().split(/\s+/).filter(Boolean).length;
             const meeting: SupportingMeeting = {
               id: `sm-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-              title: file.name.replace(/\.(txt|vtt)$/i, ""),
+              title: file.name.replace(/\.(txt|vtt|md)$/i, ""),
               transcript: cleanText,
               sourceKind: "text",
               fileName: file.name,
@@ -310,7 +311,7 @@ export default function RetrospectiveIntake({
     if (transcriptText && sourceKind !== "audio") {
       const demotedMeeting: SupportingMeeting = {
         id: `sm-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        title: audioFileName ? audioFileName.replace(/\.(txt|vtt)$/i, "") : "Previous Retro Transcript",
+        title: audioFileName ? audioFileName.replace(/\.(txt|vtt|md)$/i, "") : "Previous Retro Transcript",
         transcript: transcriptText,
         sourceKind: "text",
         fileName: audioFileName || undefined,
@@ -621,7 +622,7 @@ export default function RetrospectiveIntake({
             >
               <UploadCloud className="w-8 h-8 text-primary/80" />
               <div className="text-sm font-medium text-foreground">
-                Drop audio (.mp3, .wav, .m4a) or transcript (.txt, .vtt) files here
+                Drop audio (.mp3, .wav, .m4a) or transcript (.txt, .vtt, .md) files here
               </div>
               <p className="text-xs text-muted-foreground max-w-md">
                 Files remain entirely on your device. Drop multiple files together to upload retrospective and standup logs at once.
@@ -634,7 +635,7 @@ export default function RetrospectiveIntake({
                   <input
                     type="file"
                     multiple
-                    accept=".txt,.vtt,audio/*"
+                    accept=".txt,.vtt,.md,audio/*"
                     onChange={(e) => e.target.files?.length && handleBatchFileUpload(e.target.files)}
                     className="hidden"
                   />
@@ -673,6 +674,8 @@ export default function RetrospectiveIntake({
                               ? "Audio"
                               : audioFileName?.toLowerCase().endsWith(".vtt")
                               ? "VTT"
+                              : audioFileName?.toLowerCase().endsWith(".md")
+                              ? "MD"
                               : "Text"}
                           </span>
                         </div>
@@ -723,7 +726,7 @@ export default function RetrospectiveIntake({
                             Supporting Context
                           </span>
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground shrink-0">
-                            {meeting.sourceKind === "paste" ? "Pasted" : meeting.fileName?.endsWith(".vtt") ? "VTT" : "TXT"}
+                            {meeting.sourceKind === "paste" ? "Pasted" : meeting.fileName?.endsWith(".vtt") ? "VTT" : meeting.fileName?.endsWith(".md") ? "MD" : "TXT"}
                           </span>
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">
