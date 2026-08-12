@@ -143,6 +143,16 @@ export class NotificationDispatcher {
         }]`
       );
 
+      executedTools.forEach((t, i) => {
+        logger.info(
+          `[NotificationDispatcher Tool #${i + 1}: ${t.toolName}]\nInput Args: ${JSON.stringify(
+            t.args,
+            null,
+            2
+          )}\nResult Output: ${JSON.stringify(t.result, null, 2)}`
+        );
+      });
+
       const content =
         (agentResult.text?.trim() || `[Agile Coach Notification] Automated dispatch for '${triggerKey}' executed.`) +
         toolSummary;

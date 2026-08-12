@@ -64,7 +64,15 @@ export class McpClientService {
 
   async callTool(name: string, args: Record<string, unknown>): Promise<McpCallToolResult> {
     if (!this.initialized) await this.initialize();
-    return this.rpc<McpCallToolResult>('tools/call', { name, arguments: args });
+    this.logger.info(`[MCP CallTool -> ${name}] Arguments:\n${JSON.stringify(args, null, 2)}`);
+    try {
+      const result = await this.rpc<McpCallToolResult>('tools/call', { name, arguments: args });
+      this.logger.info(`[MCP CallTool <- ${name}] Result (isError=${Boolean(result.isError)}):\n${JSON.stringify(result, null, 2)}`);
+      return result;
+    } catch (err: any) {
+      this.logger.error(`[MCP CallTool <- ${name} ERROR]: ${err?.message || err}`);
+      throw err;
+    }
   }
 
   // ── transport ────────────────────────────────────────────────────────────────
