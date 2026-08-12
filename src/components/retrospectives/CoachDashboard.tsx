@@ -71,25 +71,6 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
     }
   };
 
-  const handleSendSlackBroadcast = async () => {
-    if (!slackMessage.trim() || !currentProject) return;
-    setIsSendingSlack(true);
-    try {
-      await retroClient.sendSlack({
-        projectId: currentProject.id,
-        recipientName: "Team Channel",
-        messageType: "pre_retro_preview",
-        content: slackMessage,
-      });
-      setSlackMessage("");
-      loadCoachData();
-    } catch (err) {
-      console.error("Failed to send Slack message", err);
-    } finally {
-      setIsSendingSlack(false);
-    }
-  };
-
   const acceptedCount = topics.filter((t) => t.state === "accepted").length;
   const totalTopics = topics.length || 1;
   const hitRate = Math.round((acceptedCount / totalTopics) * 100);
