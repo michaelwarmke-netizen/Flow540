@@ -920,6 +920,40 @@ class RetroRepository {
     return Promise.resolve(res.changes > 0);
   }
 
+  async upsertProjectsFromMcp(mcpProjects) {
+    if (!Array.isArray(mcpProjects) || mcpProjects.length === 0) return Promise.resolve([]);
+
+    const upsert = this.db.prepare(`
+      INSERT INTO projects (id, name, project_id, slack_channel_id, description, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(project_id) DO UPDATE SET
+        name = excluded.name,
+        slack_channel_id = CASE
+          WHEN excluded.slack_channel_id != '' THEN excluded.slack_channel_id
+          ELSE projects.slack_channel_id
+        END,
+        description = excluded.description,
+        updated_at = datetime('now')
+    `);
+
+    const transaction = this.db.transaction(() => {
+      for (const p of mcpProjects) {
+        if (!p) continue;
+        const rawPid = p.project_id || p.id || p.name;
+        if (!rawPid) continue;
+        const pid = String(rawPid).toUpperCase();
+        const id = p.id && typeof p.id === 'string' && p.id.length === 36 ? p.id : randomUUID();
+        const name = p.name || pid;
+        const slackChannelId = p.slack_channel_id || p.slackChannelId || '';
+        const description = p.description || '';
+        upsert.run(id, name, pid, slackChannelId, description);
+      }
+    });
+
+    transaction();
+    return this.listProjects();
+  }
+
   // --- Coach Topics API ---
   async listTopics(projectId, sprintId) {
     let query = "SELECT * FROM coach_topics WHERE 1=1";

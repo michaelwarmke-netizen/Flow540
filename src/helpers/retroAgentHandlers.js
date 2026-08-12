@@ -142,8 +142,25 @@ class RetroAgentHandlers {
           payload.settings || {},
           event?.sender
         );
-      case "projects.list":
+      case "projects.list": {
+        try {
+          const mcpClient = this._getMcpClient();
+          if (mcpClient) {
+            const { parseMcpJsonResult } = require("./agent/mcp/parseMcpResult.ts");
+            const result = await mcpClient.callTool("list_projects", {});
+            const mcpProjects = parseMcpJsonResult(result);
+            if (Array.isArray(mcpProjects) && mcpProjects.length > 0) {
+              await repo.upsertProjectsFromMcp(mcpProjects);
+              debugLogger.info(`Synced ${mcpProjects.length} projects from MCP server`);
+            }
+          }
+        } catch (err) {
+          debugLogger.warn("MCP project sync failed, falling back to local DB", {
+            error: err?.message || String(err),
+          });
+        }
         return repo.listProjects();
+      }
       case "projects.get":
         return repo.getProject(payload.id);
       case "projects.create":

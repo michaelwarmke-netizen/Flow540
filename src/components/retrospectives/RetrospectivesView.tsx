@@ -186,6 +186,15 @@ export default function RetrospectivesView({ onOpenSettings }: RetrospectivesVie
               ))}
               <option value="NEW_PROJECT">+ Create New Project...</option>
             </select>
+            <button
+              type="button"
+              onClick={() => fetchData()}
+              disabled={isLoading}
+              className="p-0.5 rounded hover:bg-surface-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              title="Refresh projects from MCP server"
+            >
+              <RotateCcw size={12} className={isLoading ? "animate-spin" : ""} />
+            </button>
           </div>
         </div>
 
