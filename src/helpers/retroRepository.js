@@ -107,9 +107,9 @@ function runRetroMigrations(db) {
 
         stmt.run(
           "sprint-23",
-          "Sprint 23 — Payments",
-          "2026-07-08",
-          "2026-07-19",
+          "Sprint 4 — Operational Readiness & Infiltration Testing",
+          "2026-08-10",
+          "2026-08-21",
           40,
           29,
           14,
@@ -117,29 +117,29 @@ function runRetroMigrations(db) {
           3,
           "behind trend",
           32,
-          "PR review delays on API gateway, Auth service deployment lock"
+          "Auxiliary corridor access security breach, Unapproved exhaust collar thickness shortcuts"
         );
 
         stmt.run(
           "sprint-22",
-          "Sprint 22 — Checkout",
-          "2026-06-24",
-          "2026-07-05",
-          36,
-          36,
-          10,
-          10,
-          0,
-          "ahead of trend",
-          36,
-          ""
+          "Sprint 3 — Emergency Heat Sinks & Exhaust Audit",
+          "2026-07-27",
+          "2026-08-07",
+          38,
+          35,
+          12,
+          11,
+          1,
+          "on trend",
+          35,
+          "Exhaust port structural collar inspection delays"
         );
 
         stmt.run(
           "sprint-21",
-          "Sprint 21 — Onboarding",
-          "2026-06-10",
-          "2026-06-21",
+          "Sprint 2 — Superlaser Control & Reactor Shielding",
+          "2026-07-13",
+          "2026-07-24",
           32,
           26,
           11,
@@ -147,14 +147,14 @@ function runRetroMigrations(db) {
           3,
           "behind trend",
           26,
-          "Onboarding flow QA handoff delays, Flaky integration test suite still intermittent"
+          "Superlaser firing control timing synchronization fault, Dual-zone exhaust vent blockage thermal risk"
         );
 
         stmt.run(
           "sprint-20",
-          "Sprint 20 — Onboarding",
-          "2026-05-27",
-          "2026-06-07",
+          "Sprint 1 — Primary Structure & Reactor Ring",
+          "2026-06-29",
+          "2026-07-10",
           34,
           22,
           12,
@@ -162,7 +162,7 @@ function runRetroMigrations(db) {
           4,
           "behind trend",
           22,
-          "CI pipeline flaky tests blocking merges, Unclear ownership on onboarding API endpoints"
+          "Conflicting design revisions on reactor support ring, Nonconforming hardware lot from secondary supplier (suspect fasteners)"
         );
       }
 
@@ -1136,7 +1136,7 @@ class RetroRepository {
       this.db.exec(`DELETE FROM sprint_snapshots`);
       this.db.exec(`DELETE FROM projects`);
 
-      const defaultProjectId = "proj-default-gen-eng";
+      const defaultProjectId = "proj-default-ds2";
 
       // 1. Re-seed default project with preserved notification settings FIRST
       this.db.prepare(`
@@ -1144,10 +1144,10 @@ class RetroRepository {
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(
         defaultProjectId,
-        "General Engineering",
-        "PROJ-GEN-ENG",
+        "Death Star II Construction",
+        "PROJ-DS2",
         "C012345678",
-        "Default engineering team project",
+        "Second Death Star construction and operational readiness",
         savedNotificationSettings
       );
 
@@ -1159,10 +1159,10 @@ class RetroRepository {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      sprintStmt.run("sprint-23", "Sprint 23 — Payments", "2026-07-08", "2026-07-19", 40, 29, 14, 10, 3, "behind trend", 32, "PR review delays on API gateway, Auth service deployment lock", defaultProjectId);
-      sprintStmt.run("sprint-22", "Sprint 22 — Checkout", "2026-06-24", "2026-07-05", 36, 36, 10, 10, 0, "ahead of trend", 36, "", defaultProjectId);
-      sprintStmt.run("sprint-21", "Sprint 21 — Onboarding", "2026-06-10", "2026-06-21", 32, 26, 11, 8, 3, "behind trend", 26, "Onboarding flow QA handoff delays, Flaky integration test suite still intermittent", defaultProjectId);
-      sprintStmt.run("sprint-20", "Sprint 20 — Onboarding", "2026-05-27", "2026-06-07", 34, 22, 12, 7, 4, "behind trend", 22, "CI pipeline flaky tests blocking merges, Unclear ownership on onboarding API endpoints", defaultProjectId);
+      sprintStmt.run("sprint-23", "Sprint 4 — Operational Readiness & Infiltration Testing", "2026-08-10", "2026-08-21", 40, 29, 14, 10, 3, "behind trend", 32, "Auxiliary corridor access security breach, Unapproved exhaust collar thickness shortcuts", defaultProjectId);
+      sprintStmt.run("sprint-22", "Sprint 3 — Emergency Heat Sinks & Exhaust Audit", "2026-07-27", "2026-08-07", 38, 35, 12, 11, 1, "on trend", 35, "Exhaust port structural collar inspection delays", defaultProjectId);
+      sprintStmt.run("sprint-21", "Sprint 2 — Superlaser Control & Reactor Shielding", "2026-07-13", "2026-07-24", 32, 26, 11, 8, 3, "behind trend", 26, "Superlaser firing control timing synchronization fault, Dual-zone exhaust vent blockage thermal risk", defaultProjectId);
+      sprintStmt.run("sprint-20", "Sprint 1 — Primary Structure & Reactor Ring", "2026-06-29", "2026-07-10", 34, 22, 12, 7, 4, "behind trend", 22, "Conflicting design revisions on reactor support ring, Nonconforming hardware lot from secondary supplier (suspect fasteners)", defaultProjectId);
 
       // Re-seed Retrospectives for Sprints 20 and 21
       const retroStmt = this.db.prepare(`
@@ -1172,31 +1172,31 @@ class RetroRepository {
 
       retroStmt.run(
         "retro-sprint-20",
-        "Sprint 20 Retrospective — Onboarding",
+        "Sprint 1 Retrospective — Death Star Construction",
         "sprint-20",
         defaultProjectId,
-        `Jordan: Welcome everyone to the Sprint 20 retrospective. It was a tough sprint — we only finished 22 of 34 committed points. Let's start with what went wrong.\nAlex: The CI pipeline flaky integration tests hit us hard. Merges were constantly blocked because test runs failed randomly.\nSarah: Also, nobody was clear on who owned the onboarding API endpoints. When a bug came up, it bounced between Alex and Marcus for two days.\nMarcus: We need clear service ownership. I'll take explicit ownership of the Onboarding API endpoints.\nJordan: Great. Alex, can you look into why the CI integration test suite is flaky?\nAlex: Yeah, I'll investigate the CI test container memory limits and flaky test runs.\nSarah: Let's also set up a team SLA for PR code reviews so pull requests don't sit in review forever.\nJordan: Good idea. Sarah will draft the PR review SLA proposal.`,
+        `Darth Sidious: Welcome, everyone. Time is credits, and judging by our rework numbers, someone has been setting credits on fire. Health of the project?\nDarth Vader: Overall progress is acceptable. Primary construction reached fifty-three percent and superlaser assembly reached sixty-four percent. Reactor work lost time to alignment correction and suspect hardware.\nDarth Sidious: Very nice, Vader. We built a great deal and then discovered some of it was held together by bargain-bin fasteners. Inspiring.\nGrand Admiral Thrawn: Logistics improved significantly. We recovered delayed focusing components and isolated the supplier-quality problem before it spread further.\nGeneral Grievous: Droid crews performed above expectations. Contractor quality remains inconsistent and caused avoidable rework.\nDarth Maul: Security closed several anomalous access cases. We also identified the supplier incident as a possible sabotage vector.\nDarth Sidious: Look at that-teamwork with a faint scent of treason. My favorite kind.\nGrand Admiral Thrawn: Challenges remain. Reactor support work will carry over, thermal shielding has not started, and superlaser integration is still incomplete.\nGeneral Grievous: We need stricter incoming inspection and controlled engineering revisions.\nDarth Vader: Next sprint, we finish reactor support repairs, begin shielding, and integrate the superlaser control system.\nDarth Maul: I recommend penetration testing against contractor and supplier access paths before the Rebels find them first.\nDarth Sidious: Excellent suggestion. Imagine that, learning before suffering consequences. Vader, perhaps record this historic moment.\nDarth Vader: ...Noted.\nDarth Sidious: Immediate actions: replace the suspect hardware, tighten supplier controls, start shielding, and stop anyone from improvising on a moon-sized weapons platform. Meeting adjourned.`,
         "paste",
-        "Jordan Smith",
+        "Darth Sidious",
         "completed",
         1,
-        "2026-06-08 10:00:00"
+        "2026-07-10 10:00:00"
       );
 
       retroStmt.run(
         "retro-sprint-21",
-        "Sprint 21 Retrospective — Onboarding",
+        "Sprint 2 Retrospective — Superlaser & Shielding",
         "sprint-21",
         defaultProjectId,
-        `Sarah: Sprint 21 retro. We hit 26 points out of 32 committed, which is an improvement over Sprint 20!\nMarcus: The onboarding API endpoint documentation really helped. I handled all incoming endpoint requests smoothly.\nAlex: But the QA handoff process was really bumpy. QA didn't get build artifacts until Thursday afternoon, which created a massive testing bottleneck.\nJordan: We should automate the QA staging deploy as soon as a PR lands in main.\nSarah: Excellent suggestion. Jordan, will you build the automated staging deploy pipeline step?\nJordan: Yes, I can set that up in GitHub Actions.\nAlex: Also, the staging database config drifted from production during the migration test. We need automated config validation.\nMarcus: I can own the staging config validation check script.`,
+        `Darth Sidious: Welcome, everyone. Another sprint concludes, and the second Death Star remains aggressively unfinished. Health of the project?\nDarth Vader: Progress improved. Superlaser control integration is complete, primary construction reached sixty-seven percent, and reactor shielding reached fifty-one percent.\nDarth Sidious: Very nice, Vader. The laser works and half the reactor is protected. It is the sort of confidence-inspiring sentence that keeps insurance companies awake.\nGrand Admiral Thrawn: Logistics stabilized and supplier controls reduced incoming-quality risk. Thermal modeling exposed a dual-zone heat-rejection weakness before operational testing.\nGeneral Grievous: Contractor quality improved. Rework declined significantly, and revised shielding brackets increased installation throughput.\nDarth Maul: Security testing rejected hostile command traffic and closed the overprivileged supplier account. The remaining concern is physical exposure along exhaust and maintenance routes.\nDarth Sidious: Look at that-teamwork. Almost enough to make me believe in organizational culture.\nGrand Admiral Thrawn: Challenges remain. Shielding is barely past halfway, emergency heat sinks are not installed, and the exhaust-route design still needs validation.\nGeneral Grievous: The new thermal mitigation will delay some shielding sections.\nDarth Vader: Next sprint, we complete the heat sinks, accelerate shielding, reinforce the exhaust routes, and run full reactor-load testing.\nDarth Maul: I recommend full penetration testing during the load test, including physical infiltration scenarios.\nDarth Sidious: Excellent. If the Rebels are going to attempt something theatrical, I would like our people to rehearse the humiliation privately first.\nDarth Vader: Understood.\nDarth Sidious: Immediate actions: finish thermal mitigation, push shielding past eighty percent, validate the exhaust architecture, and test this machine like we expect someone clever to attack it. Because, regrettably, someone clever usually does.`,
         "paste",
-        "Sarah Jenkins",
+        "Darth Sidious",
         "completed",
         1,
-        "2026-06-22 10:00:00"
+        "2026-07-24 10:00:00"
       );
 
-      // Re-seed proposals & tracked actions for Sprints 20, 21, 22
+      // Re-seed proposals & tracked actions for Sprints 20, 21
       const propStmt = this.db.prepare(`
         INSERT INTO retro_proposals (id, retrospective_id, title, description, basis, source, state, dedup_key, suggested_owner, suggested_estimate_value, suggested_estimate_unit)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1207,25 +1207,31 @@ class RetroRepository {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      // Sprint 20 Actions
-      propStmt.run("prop-20-1", "retro-sprint-20", "Audit and stabilize flaky CI integration test suite", "Investigate memory limits and intermittent test failures in CI runner", "Transcript discussion", "explicit", "accepted", "audit and stabilize flaky ci integration test suite", "Alex Chen", 4, "hours");
-      actionStmt.run("act-20-1", "prop-20-1", "retro-sprint-20", "sprint-20", "Audit and stabilize flaky CI integration test suite", "Investigate memory limits and intermittent test failures in CI runner", "Audit and stabilize flaky CI integration test suite", "Investigate memory limits and intermittent test failures in CI runner", "explicit", "Alex Chen", "alex chen", 4, "hours", 240, "completed", "AGILE-1001", "created", '{"key":"AGILE-1001","summary":"Audit and stabilize flaky CI integration test suite"}');
+      // Sprint 20 Actions (Sprint 1)
+      propStmt.run("prop-20-1", "retro-sprint-20", "Complete reactor fastener replacement and pass repeat proof-load testing", "Replace all nonconforming hardware and pass repeat proof-load testing", "Transcript discussion", "explicit", "accepted", "complete reactor fastener replacement and pass repeat proof load testing", "General Grievous", 4, "hours");
+      actionStmt.run("act-20-1", "prop-20-1", "retro-sprint-20", "sprint-20", "Complete reactor fastener replacement and pass repeat proof-load testing", "Replace all nonconforming hardware and pass repeat proof-load testing", "Complete reactor fastener replacement and pass repeat proof-load testing", "Replace all nonconforming hardware and pass repeat proof-load testing", "explicit", "General Grievous", "general grievous", 4, "hours", 240, "completed", "AGILE-1001", "created", '{"key":"AGILE-1001","summary":"Complete reactor fastener replacement and pass repeat proof-load testing"}');
 
-      propStmt.run("prop-20-2", "retro-sprint-20", "Document ownership and SLA for Onboarding API endpoints", "Assign explicit component owner to resolve bounce-around bug reports", "Coach analysis", "coach", "accepted", "document ownership and sla for onboarding api endpoints", "Marcus Vance", 2, "hours");
-      actionStmt.run("act-20-2", "prop-20-2", "retro-sprint-20", "sprint-20", "Document ownership and SLA for Onboarding API endpoints", "Assign explicit component owner to resolve bounce-around bug reports", "Document ownership and SLA for Onboarding API endpoints", "Assign explicit component owner to resolve bounce-around bug reports", "coach", "Marcus Vance", "marcus vance", 2, "hours", 120, "completed", null, null, null);
+      propStmt.run("prop-20-2", "retro-sprint-20", "Implement supplier incoming inspection and independent material testing", "Add lot verification and independent material testing for critical components", "Coach analysis", "coach", "accepted", "implement supplier incoming inspection and independent material testing", "Grand Admiral Thrawn", 2, "hours");
+      actionStmt.run("act-20-2", "prop-20-2", "retro-sprint-20", "sprint-20", "Implement supplier incoming inspection and independent material testing", "Add lot verification and independent material testing for critical components", "Implement supplier incoming inspection and independent material testing", "Add lot verification and independent material testing for critical components", "coach", "Grand Admiral Thrawn", "grand admiral thrawn", 2, "hours", 120, "completed", null, null, null);
 
-      propStmt.run("prop-20-3", "retro-sprint-20", "Draft initial PR review response time SLA (24h target)", "Establish team SLA to ensure code reviews happen within 24 hours", "Transcript discussion", "explicit", "accepted", "draft initial pr review response time sla (24h target)", "Sarah Jenkins", 1, "days");
-      actionStmt.run("act-20-3", "prop-20-3", "retro-sprint-20", "sprint-20", "Draft initial PR review response time SLA (24h target)", "Establish team SLA to ensure code reviews happen within 24 hours", "Draft initial PR review response time SLA (24h target)", "Establish team SLA to ensure code reviews happen within 24 hours", "explicit", "Sarah Jenkins", "sarah jenkins", 1, "days", 480, "open", "AGILE-1002", "created", '{"key":"AGILE-1002","summary":"Draft initial PR review response time SLA (24h target)"}');
+      propStmt.run("prop-20-3", "retro-sprint-20", "Test contractor and supplier identity workflow access paths", "Run controlled security tests against contractor and supplier identity workflows", "Transcript discussion", "explicit", "accepted", "test contractor and supplier identity workflow access paths", "Darth Maul", 1, "days");
+      actionStmt.run("act-20-3", "prop-20-3", "retro-sprint-20", "sprint-20", "Test contractor and supplier identity workflow access paths", "Run controlled security tests against contractor and supplier identity workflows", "Test contractor and supplier identity workflow access paths", "Run controlled security tests against contractor and supplier identity workflows", "explicit", "Darth Maul", "darth maul", 1, "days", 480, "open", "AGILE-1002", "created", '{"key":"AGILE-1002","summary":"Test contractor and supplier identity workflow access paths"}');
 
-      // Sprint 21 Actions
-      propStmt.run("prop-21-1", "retro-sprint-21", "Automate QA staging deployment in CI/CD pipeline on main branch merge", "Deploy automatically to staging upon PR merge to eliminate QA handoff delays", "Transcript discussion", "explicit", "accepted", "automate qa staging deployment in ci/cd pipeline on main branch merge", "Jordan Smith", 1, "days");
-      actionStmt.run("act-21-1", "prop-21-1", "retro-sprint-21", "sprint-21", "Automate QA staging deployment in CI/CD pipeline on main branch merge", "Deploy automatically to staging upon PR merge to eliminate QA handoff delays", "Automate QA staging deployment in CI/CD pipeline on main branch merge", "Deploy automatically to staging upon PR merge to eliminate QA handoff delays", "explicit", "Jordan Smith", "jordan smith", 1, "days", 480, "completed", null, null, null);
+      propStmt.run("prop-20-4", "retro-sprint-20", "Start reactor shielding installation after structural acceptance", "Begin shielding installation after structural acceptance is complete", "Transcript discussion", "explicit", "accepted", "start reactor shielding installation after structural acceptance", "Darth Vader", 1, "days");
+      actionStmt.run("act-20-4", "prop-20-4", "retro-sprint-20", "sprint-20", "Start reactor shielding installation after structural acceptance", "Begin shielding installation after structural acceptance is complete", "Start reactor shielding installation after structural acceptance", "Begin shielding installation after structural acceptance is complete", "explicit", "Darth Vader", "darth vader", 1, "days", 480, "completed", null, null, null);
 
-      propStmt.run("prop-21-2", "retro-sprint-21", "Implement staging vs production database configuration drift validation script", "Automated check to ensure staging database schema matches production", "Coach analysis", "coach", "accepted", "implement staging vs production database configuration drift validation script", "Marcus Vance", 4, "hours");
-      actionStmt.run("act-21-2", "prop-21-2", "retro-sprint-21", "sprint-21", "Implement staging vs production database configuration drift validation script", "Automated check to ensure staging database schema matches production", "Implement staging vs production database configuration drift validation script", "Automated check to ensure staging database schema matches production", "coach", "Marcus Vance", "marcus vance", 4, "hours", 240, "completed", "AGILE-1003", "created", '{"key":"AGILE-1003","summary":"Implement staging vs production database configuration drift validation script"}');
+      // Sprint 21 Actions (Sprint 2)
+      propStmt.run("prop-21-1", "retro-sprint-21", "Install emergency reactor heat sinks in vulnerable vent zones", "Complete supplemental thermal mitigation in vulnerable vent zones", "Transcript discussion", "explicit", "accepted", "install emergency reactor heat sinks in vulnerable vent zones", "General Grievous", 1, "days");
+      actionStmt.run("act-21-1", "prop-21-1", "retro-sprint-21", "sprint-21", "Install emergency reactor heat sinks in vulnerable vent zones", "Complete supplemental thermal mitigation in vulnerable vent zones", "Install emergency reactor heat sinks in vulnerable vent zones", "Complete supplemental thermal mitigation in vulnerable vent zones", "explicit", "General Grievous", "general grievous", 1, "days", 480, "completed", null, null, null);
 
-      propStmt.run("prop-21-3", "retro-sprint-21", "Establish QA handoff checklist and definition of ready for testing", "Document requirements before tickets transition to QA testing", "Transcript discussion", "explicit", "accepted", "establish qa handoff checklist and definition of ready for testing", "Sarah Jenkins", 2, "hours");
-      actionStmt.run("act-21-3", "prop-21-3", "retro-sprint-21", "sprint-21", "Establish QA handoff checklist and definition of ready for testing", "Document requirements before tickets transition to QA testing", "Establish QA handoff checklist and definition of ready for testing", "Document requirements before tickets transition to QA testing", "explicit", "Sarah Jenkins", "sarah jenkins", 2, "hours", 120, "completed", null, null, null);
+      propStmt.run("prop-21-2", "retro-sprint-21", "Accelerate reactor shielding installation to reach 75% completion", "Accelerate shielding crews and clear engineering blockers", "Transcript discussion", "explicit", "accepted", "accelerate reactor shielding installation to reach 75% completion", "Darth Vader", 4, "hours");
+      actionStmt.run("act-21-2", "prop-21-2", "retro-sprint-21", "sprint-21", "Accelerate reactor shielding installation to reach 75% completion", "Accelerate shielding crews and clear engineering blockers", "Accelerate reactor shielding installation to reach 75% completion", "Accelerate shielding crews and clear engineering blockers", "explicit", "Darth Vader", "darth vader", 4, "hours", 240, "completed", "AGILE-1003", "created", '{"key":"AGILE-1003","summary":"Accelerate reactor shielding installation to reach 75% completion"}');
+
+      propStmt.run("prop-21-3", "retro-sprint-21", "Execute physical infiltration test against critical reactor and targeting systems", "Use elite teams to attempt access to critical reactor and targeting systems", "Transcript discussion", "explicit", "accepted", "execute physical infiltration test against critical reactor and targeting systems", "Darth Maul", 1, "days");
+      actionStmt.run("act-21-3", "prop-21-3", "retro-sprint-21", "sprint-21", "Execute physical infiltration test against critical reactor and targeting systems", "Use elite teams to attempt access to critical reactor and targeting systems", "Execute physical infiltration test against critical reactor and targeting systems", "Use elite teams to attempt access to critical reactor and targeting systems", "explicit", "Darth Maul", "darth maul", 1, "days", 480, "completed", null, null, null);
+
+      propStmt.run("prop-21-4", "retro-sprint-21", "Validate dual-zone thermal resilience and material support for accelerated shielding", "Confirm dual-zone thermal resilience and material support for accelerated shielding", "Coach analysis", "coach", "accepted", "validate dual zone thermal resilience and material support for accelerated shielding", "Grand Admiral Thrawn", 4, "hours");
+      actionStmt.run("act-21-4", "prop-21-4", "retro-sprint-21", "sprint-21", "Validate dual-zone thermal resilience and material support for accelerated shielding", "Confirm dual-zone thermal resilience and material support for accelerated shielding", "Validate dual-zone thermal resilience and material support for accelerated shielding", "Confirm dual-zone thermal resilience and material support for accelerated shielding", "coach", "Grand Admiral Thrawn", "grand admiral thrawn", 4, "hours", 240, "completed", null, null, null);
 
       // Re-seed coach topics for Sprints 20, 21, 22
       const topicStmt = this.db.prepare(`
@@ -1233,14 +1239,14 @@ class RetroRepository {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      topicStmt.run("topic-20-1", defaultProjectId, "sprint-20", "CI Pipeline Flakiness & Test Memory Allocation", "Flaky integration tests caused 4 blocked issues and velocity drop", "metric_driven", 1, "accepted");
-      topicStmt.run("topic-20-2", defaultProjectId, "sprint-20", "Onboarding API Endpoint Service Ownership", "Unclear ownership created multi-day resolution delays on API bugs", "blind_spot", 2, "accepted");
+      topicStmt.run("topic-20-1", defaultProjectId, "sprint-20", "Supplier Fastener Quality & Lot Material Verification", "Nonconforming hardware lot caused 4 blocked issues and rework consuming 14% of capacity", "metric_driven", 1, "accepted");
+      topicStmt.run("topic-20-2", defaultProjectId, "sprint-20", "Reactor Ring Alignment & Design Revision Control", "Conflicting design revisions issued to separate contractor teams caused 3cm alignment variance", "blind_spot", 2, "accepted");
 
-      topicStmt.run("topic-21-1", defaultProjectId, "sprint-21", "Automated QA Deployment & Handoff Pipeline", "QA handoff bottleneck delayed testing until end of sprint", "metric_driven", 1, "accepted");
-      topicStmt.run("topic-21-2", defaultProjectId, "sprint-21", "Staging Database Drift Prevention", "Configuration mismatch between staging and production during migration", "recurring", 2, "accepted");
+      topicStmt.run("topic-21-1", defaultProjectId, "sprint-21", "Dual-Zone Vent Obstruction & Heat Rejection Modeling", "Thermal model failure under dual-zone blockage required emergency heat sink carryover", "metric_driven", 1, "accepted");
+      topicStmt.run("topic-21-2", defaultProjectId, "sprint-21", "Superlaser Firing Control Timing Synchronization Safety", "Firing-control bus commanded reactor draw 70ms before targeting lock confirmation", "recurring", 2, "accepted");
 
-      topicStmt.run("topic-22-1", defaultProjectId, "sprint-22", "PR Size Optimization & Fast Review SLAs", "Keeping PR size under 300 LOC accelerated review turnaround", "best_practice", 1, "accepted");
-      topicStmt.run("topic-22-2", defaultProjectId, "sprint-22", "Sustaining 100% Completion Velocity", "Analyzing team factors behind zero-blocker, 36/36 point sprint completion", "metric_driven", 2, "accepted");
+      topicStmt.run("topic-22-1", defaultProjectId, "sprint-22", "Exhaust Port Structural Reinforcement & Contractor Quality", "Contractors reduced reinforcement thickness without approval, creating structural and security weakness", "best_practice", 1, "accepted");
+      topicStmt.run("topic-22-2", defaultProjectId, "sprint-22", "Reactor Load Testing & Operational Readiness Criteria", "Full reactor load simulation and penetration testing required to validate shielding and security gates", "metric_driven", 2, "accepted");
 
       // Re-seed coach insights
       const insightStmt = this.db.prepare(`
@@ -1252,18 +1258,18 @@ class RetroRepository {
         "insight-1",
         defaultProjectId,
         "recurring_issue",
-        "PR Review Bottleneck Pattern",
-        "PR review delays on API gateway reviews appeared as blockers in 3 of the last 4 sprints. Team velocity improves by 24% when code review SLA is explicitly discussed.",
+        "Exhaust Vent & Thermal Dissipation Vulnerability Pattern",
+        "Thermal limits and exhaust paths have recurred as potential single points of failure in every sprint review. Sprint 1 identified heat-rejection dependencies, Sprint 2 exposed dual-zone thermal model failure, and contractor shortcuts on exhaust collars continued into Sprint 3.",
         0.88,
-        JSON.stringify(["sprint-20", "sprint-21", "sprint-24"])
+        JSON.stringify(["sprint-20", "sprint-21", "sprint-23"])
       );
 
       insightStmt.run(
         "insight-2",
         defaultProjectId,
         "improving_trend",
-        "Action Item Completion Arc",
-        "Action item completion rate increased from 40% to 75% over recent sprints since owner attribution was enforced in retro intake.",
+        "Contractor Quality Control Arc",
+        "Material inspection controls introduced after Sprint 1's nonconforming fastener lot reduced contractor rework by 35% in Sprint 2. Droid workforce uptime exceeded 99% in Sprint 3. However, unauthorized design shortcuts on exhaust collars indicate contractor process discipline remains inconsistent.",
         0.92,
         JSON.stringify(["sprint-20", "sprint-21", "sprint-22"])
       );
@@ -1272,10 +1278,10 @@ class RetroRepository {
         "insight-3",
         defaultProjectId,
         "blind_spot",
-        "Testing & QA Blind Spot",
-        "Automated test coverage has not been brought up in retro meetings despite accounting for 30% of sprint blockers. The coach recommends adding test automation as a pre-retro topic.",
+        "Physical & Credential Security Access Vectors",
+        "Third-party supplier integrations and contractor credential management represent recurring unmonitored risk vectors. Sprint 1 found anomalous contractor credentials and a disguised reconnaissance relay. Sprint 2 closed an overprivileged supplier service account. Red-team infiltration in Sprint 3 reached an auxiliary reactor-control corridor through a maintenance route.",
         0.75,
-        JSON.stringify(["sprint-20", "sprint-21", "sprint-24"])
+        JSON.stringify(["sprint-20", "sprint-21", "sprint-23"])
       );
 
       // Reset Jira counter

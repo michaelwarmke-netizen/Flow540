@@ -17,70 +17,47 @@
 
 | Sprint | Name | Dates | Committed | Completed | Issues | Completed | Blocked | Trend | Velocity | Blockers |
 |--------|------|-------|-----------|-----------|--------|-----------|---------|-------|----------|----------|
-| **Sprint 20** | Sprint 20 — Onboarding | Jun 27 – Jun 07 | 34 | 22 | 12 | 7 | 4 | behind trend | 22 | "CI pipeline flaky tests blocking merges, Unclear ownership on onboarding API endpoints" |
-| **Sprint 21** | Sprint 21 — Onboarding | Jun 10 – Jun 21 | 32 | 26 | 11 | 8 | 3 | behind trend | 26 | "Onboarding flow QA handoff delays, Flaky integration test suite still intermittent" |
-| **Sprint 22** | Sprint 22 — Checkout | Jun 10 – Jun 21 | 36 | 36 | 10 | 10 | 0 | ahead of trend | 36 | *(none)* |
-| **Sprint 23** | Sprint 23 — Payments | Jun 24 – Jul 05 | 38 | 35 | 12 | 11 | 1 | on trend | 35 | "Staging database migration" |
-| **Sprint 24** | Sprint 24 — Payments | Jul 08 – Jul 19 | 40 | 29 | 14 | 10 | 3 | behind trend | 32 | "PR review delays on API gateway, Auth service deployment lock" |
+| **Sprint 1** | Sprint 1 — Primary Structure & Reactor Ring | Jun 29 – Jul 10 | 34 | 22 | 12 | 7 | 4 | behind trend | 22 | "Conflicting design revisions on reactor support ring, Nonconforming hardware lot from secondary supplier (suspect fasteners)" |
+| **Sprint 2** | Sprint 2 — Superlaser Control & Reactor Shielding | Jul 13 – Jul 24 | 32 | 26 | 11 | 8 | 3 | behind trend | 26 | "Superlaser firing control timing synchronization fault, Dual-zone exhaust vent blockage thermal risk" |
+| **Sprint 3** | Sprint 3 — Emergency Heat Sinks & Exhaust Audit | Jul 27 – Aug 07 | 38 | 35 | 12 | 11 | 1 | on trend | 35 | "Exhaust port structural collar inspection delays" |
+| **Sprint 4** | Sprint 4 — Operational Readiness & Infiltration Testing | Aug 10 – Aug 21 | 40 | 29 | 14 | 10 | 3 | behind trend | 32 | "Auxiliary corridor access security breach, Unapproved exhaust collar thickness shortcuts" |
 
-**The narrative:** Sprint 20 was rough (65% completion, 4 blockers). Sprint 21 improved slightly. Sprint 22 was a breakout sprint. Sprint 23 held steady. Sprint 24 regressed — which is the sprint we'll run the live retro analysis on. The coach detects the pattern and suggests topics accordingly.
+**The narrative:** Sprint 1 was rough (65% completion, 4 blockers due to suspect hardware). Sprint 2 improved slightly as supplier controls took effect, but revealed thermal vent weaknesses. Sprint 3 completed major heat-sink installation but left collar audits pending. Sprint 4 regressed — auxiliary corridor infiltration occurred during load testing — which is the sprint we'll run the live retro analysis on. The coach detects the pattern and suggests topics accordingly.
 
-### Sample Retro Transcript (for Sprint 24 Live Demo)
+### Sample Retro Transcript (for Sprint 4 Live Demo)
 
 Use this transcript for the live analysis. It's realistic, contains multiple speakers, discusses blockers, and includes both explicit action items and things the AI coach should pick up on:
 
 ```
-Sarah: Okay, welcome everyone to the Sprint 24 retro. Let's start with what went well.
+Darth Sidious: Welcome, everyone. Sprint 4 retrospective. The station is nearly operational, which historically is when everything goes wrong. Health of the project?
 
-Marcus: The payments SDK migration went pretty smoothly, honestly. We finished that two days early. The documentation Alex wrote really helped onboard everyone fast.
+Darth Vader: Reactor shielding reached ninety-one percent last sprint. Construction crews exceeded goals. However, the auxiliary corridor security breach during penetration testing exposed a weakness we had not anticipated.
 
-Alex: Thanks! Yeah, documenting the API contracts first actually saved a lot of back-and-forth. I think we should keep doing that going forward.
+Darth Sidious: Wonderful. Ninety-one percent protected and the remaining nine percent is apparently a guided tour for Rebel commandos.
 
-Sarah: Agreed. Now let's talk about what didn't go so well. The elephant in the room is we only completed 29 out of 40 committed points.
+Grand Admiral Thrawn: Logistics remained stable. Supply routes were uninterrupted and we have thirty days of consumable inventory staged. The completion risk forecast shows we are recoverable if shielding closes this sprint.
 
-Jordan: The biggest issue was the PR review delays on the API gateway service. I had three PRs sitting for over 48 hours. By the time they got reviewed, there were merge conflicts and I had to redo work.
+General Grievous: Droid workforce uptime exceeded ninety-nine percent. However, contractor shortcuts on exhaust port reinforcement collars created three separate structural findings. Two were not caught by the normal inspection process.
 
-Marcus: Same here. I think part of the problem is that only two people on the team are approved reviewers for the gateway repo, and they were both heads-down on their own work.
+Darth Sidious: Contractors again. At this point I am genuinely curious whether they are incompetent or actively assisting the Rebellion. Either way, the outcome is identical.
 
-Sarah: That's a structural problem. Should we expand the reviewer pool?
+Darth Maul: The red team reached an auxiliary reactor-control corridor through a maintenance route before being intercepted. They came within two security barriers of critical systems. After remediation, the hardened corridor resisted the repeat attempt, but the initial success is concerning.
 
-Jordan: Absolutely. I think we should get at least two more people onboarded as reviewers. I can run a session to walk through the gateway architecture.
+Darth Vader: We added blast doors, physical barriers, and restricted segmentation. The engineering changes preserve maintenance and emergency access.
 
-Alex: I'd volunteer for that. And maybe we set an SLA — like PRs should get a first review within 24 hours.
+Darth Sidious: Good. What about the exhaust port situation? I have developed what I believe is a reasonable anxiety about exhaust architecture.
 
-Sarah: Great, let's make both of those action items. Jordan to run the gateway review onboarding session, and we'll establish a 24-hour PR review SLA. Jordan, can you own the onboarding session?
+General Grievous: All three nonconforming collars have been restored to approved design thickness and passed structural inspection. But the fact that contractors deviated from controlled drawings without detection suggests our inspection gates need strengthening.
 
-Jordan: Yeah, I'll have it done by mid-sprint. Let's say within the first week of Sprint 25.
+Grand Admiral Thrawn: I recommend mandatory dual-sign-off on any structural modification in exhaust-adjacent sections. The pattern of unauthorized changes is the real risk, not any single collar.
 
-Sarah: The other blocker was the auth service deployment lock. What happened there?
+Darth Sidious: Excellent suggestion. Thrawn, implement that control.
 
-Marcus: We had a config issue in staging that took two days to diagnose. The deployment pipeline was fine — the problem was that our staging environment config had drifted from production. Nobody caught it because we don't have config drift detection.
+Darth Maul: I also recommend we run a final comprehensive security review — physical and cyber — before we declare operational readiness. The infiltration test proved our remediation works, but we have not tested the full station perimeter since the corridor hardening.
 
-Alex: This is the second time a staging-production config mismatch bit us. We had something similar in Sprint 21 with the database migration.
+Darth Vader: Agreed. We should combine the final security review with the remaining shielding acceptance testing. One integrated operational readiness exercise.
 
-Sarah: Should we prioritize some kind of config validation step?
-
-Marcus: Yeah, I'll create a ticket for implementing config drift detection in our CI pipeline. It's probably a day or two of work.
-
-Sarah: Okay, now what about testing? We've had flaky tests mentioned as a blocker in several recent sprints. Is that getting better?
-
-Alex: Honestly, nobody's really touched it. We keep saying we'll address it but other work takes priority. The integration test suite is still intermittent — maybe one in five runs fails for no real reason.
-
-Jordan: I think it's a resource problem. The test containers don't have enough memory allocated in CI. It's probably a quick fix but it keeps getting deprioritized.
-
-Sarah: Let's make that an explicit action item this time. Jordan, can you take the CI test container memory fix?
-
-Jordan: Sure, that should be a quick one. Maybe two hours.
-
-Sarah: Anything else before we wrap up?
-
-Marcus: One thing — I noticed we keep overcommitting. We went from 36 points completed to committing 40 this sprint but only hit 29. Maybe we should be more conservative with planning?
-
-Sarah: That's a good point. Let's factor in a buffer next sprint planning. Alex, can you put together some historical velocity data so we have a baseline?
-
-Alex: Sure, I'll compile that before sprint planning.
-
-Sarah: Great retro everyone. Let's make sure these action items actually get done this time.
+Darth Sidious: Very good. Immediate actions: close the final shielding, implement the dual-sign-off inspection control, run the integrated readiness exercise, and stop the contractors from treating engineering drawings as creative suggestions. Meeting adjourned.
 ```
 
 ---
@@ -90,11 +67,11 @@ Sarah: Great retro everyone. Let's make sure these action items actually get don
 ### 🎬 Act 1: The Setup (1 minute)
 
 **What you say:**
-> "Let me show you what happens before, during, and after a retrospective with our Agile Coach Agent. I'm going to walk you through a real team scenario — a payments team finishing Sprint 24."
+> "Let me show you what happens before, during, and after a retrospective with our Agile Coach Agent. I'm going to walk you through a real team scenario — the Death Star II engineering team finishing Sprint 4."
 
 **What you do:**
 1. Open the app → Navigate to the **Retrospectives** section
-2. Show the **project dropdown** — select "General Engineering"
+2. Show the **project dropdown** — select "Death Star II Construction"
 3. Quickly show the **Action Items** tab with some existing tracked actions (from prior sprints)
 4. Point out: *"Notice we already have some carried-over actions from previous sprints. The coach remembers these."*
 
