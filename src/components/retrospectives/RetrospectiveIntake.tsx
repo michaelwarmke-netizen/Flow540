@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   type SprintSnapshot,
   type Retrospective,
+  type SupportingMeeting,
   type ModelDescribeResult,
   type RetroAnalysisProgress,
   type CoachTopic,
@@ -19,6 +20,11 @@ import {
   X,
   Plus,
   Clock,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  Calendar,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -45,6 +51,10 @@ export default function RetrospectiveIntake({
   const [sourceKind, setSourceKind] = useState<"audio" | "text" | "paste">("paste");
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [audioSourcePath, setAudioSourcePath] = useState<string | null>(null);
+
+  // Supporting Sprint Meetings state
+  const [supportingMeetings, setSupportingMeetings] = useState<SupportingMeeting[]>([]);
+  const [isSupportingOpen, setIsSupportingOpen] = useState<boolean>(true);
 
   const [modelStatus, setModelStatus] = useState<ModelDescribeResult | null>(null);
   const [isCheckingModel, setIsCheckingModel] = useState<boolean>(true);
@@ -252,37 +262,86 @@ export default function RetrospectiveIntake({
     }
   };
 
-  const handleFileUpload = (file: File) => {
-    const isTxt = file.name.toLowerCase().endsWith(".txt");
-    const isVtt = file.name.toLowerCase().endsWith(".vtt");
+  const handleBatchFileUpload = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    fileArray.forEach((file) => {
+      const isTxt = file.name.toLowerCase().endsWith(".txt");
+      const isVtt = file.name.toLowerCase().endsWith(".vtt");
+      const isAudio = file.type.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name);
 
-    if (isTxt || isVtt) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        const cleanText = isVtt ? parseVttToTranscript(text) : text;
-        setTranscriptText(cleanText);
-        setSourceKind("text");
-        setAudioFileName(file.name);
-      };
-      reader.readAsText(file);
-    } else {
-      // Audio file
-      setAudioFileName(file.name);
-      // In Electron renderer, webUtils or File.path gives real local file path
-      const filePath = (file as any).path || file.name;
-      setAudioSourcePath(filePath);
-      setSourceKind("audio");
-      if (!transcriptText) {
-        setTranscriptText(`[Audio File: ${file.name} - Ready for analysis]`);
+      if (isAudio) {
+        if (!audioFileName && !transcriptText) {
+          setAudioFileName(file.name);
+          const filePath = (file as any).path || file.name;
+          setAudioSourcePath(filePath);
+          setSourceKind("audio");
+          setTranscriptText(`[Audio File: ${file.name} - Ready for analysis]`);
+        }
+      } else if (isTxt || isVtt) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const raw = e.target?.result as string;
+          const cleanText = isVtt ? parseVttToTranscript(raw) : raw;
+
+          if (!audioFileName && (!transcriptText || sourceKind === "paste")) {
+            setTranscriptText(cleanText);
+            setSourceKind("text");
+            setAudioFileName(file.name);
+          } else {
+            const wordCount = cleanText.trim().split(/\s+/).filter(Boolean).length;
+            const meeting: SupportingMeeting = {
+              id: `sm-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+              title: file.name.replace(/\.(txt|vtt)$/i, ""),
+              transcript: cleanText,
+              sourceKind: "text",
+              fileName: file.name,
+              wordCount,
+              meetingDate: new Date().toISOString().split("T")[0],
+            };
+            setSupportingMeetings((prev) => [...prev, meeting]);
+          }
+        };
+        reader.readAsText(file);
       }
+    });
+  };
+
+  const handlePromoteToPrimaryRetro = (meeting: SupportingMeeting) => {
+    if (transcriptText && sourceKind !== "audio") {
+      const demotedMeeting: SupportingMeeting = {
+        id: `sm-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        title: audioFileName ? audioFileName.replace(/\.(txt|vtt)$/i, "") : "Previous Retro Transcript",
+        transcript: transcriptText,
+        sourceKind: "text",
+        fileName: audioFileName || undefined,
+        wordCount: transcriptText.trim().split(/\s+/).filter(Boolean).length,
+        meetingDate: new Date().toISOString().split("T")[0],
+      };
+      setSupportingMeetings((prev) => [...prev.filter((m) => m.id !== meeting.id), demotedMeeting]);
+    } else {
+      setSupportingMeetings((prev) => prev.filter((m) => m.id !== meeting.id));
     }
+
+    setTranscriptText(meeting.transcript);
+    setSourceKind("text");
+    setAudioFileName(meeting.title);
+    setAudioSourcePath(null);
+  };
+
+  const handleRemoveSupportingMeeting = (id: string) => {
+    setSupportingMeetings((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const handleUpdateSupportingTitle = (id: string, newTitle: string) => {
+    setSupportingMeetings((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, title: newTitle } : m))
+    );
   };
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files[0]);
+      handleBatchFileUpload(e.dataTransfer.files);
     }
   };
 
@@ -303,6 +362,7 @@ export default function RetrospectiveIntake({
         sourceKind: sourceKind,
         audioPath: audioSourcePath || undefined,
         meetingOwner: uploaderIdentity || undefined,
+        supportingMeetings: supportingMeetings.length > 0 ? supportingMeetings : undefined,
       });
 
       setCurrentRetroId(retro.id);
@@ -541,98 +601,186 @@ export default function RetrospectiveIntake({
         </div>
       ) : (
         <>
-          {/* Transcript Source */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Transcript Source
-            </label>
-            {audioFileName ? (
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 flex items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <FileText size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground truncate">
-                        {audioFileName}
-                      </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary shrink-0">
-                        {sourceKind === "audio"
-                          ? "Audio File"
-                          : audioFileName?.toLowerCase().endsWith(".vtt")
-                          ? "VTT Transcript"
-                          : "Text File"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      Ready for retrospective analysis
-                    </p>
-                  </div>
-                </div>
+          {/* Unified Sprint Transcripts & Meeting Context Section */}
+          <div className="space-y-4 rounded-xl border border-border/60 bg-surface-1/30 p-5 shadow-2xs">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                <Layers size={16} className="text-primary" />
+                Sprint Transcripts & Meeting Context
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Upload audio or transcripts for your primary retrospective and any supporting sprint meetings (standups, spec syncs, notes). You can drop multiple files at once.
+              </p>
+            </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <label className="cursor-pointer">
-                    <span className="inline-flex items-center justify-center h-7 px-2.5 rounded-md border border-border/60 bg-background text-foreground text-xs font-medium hover:bg-surface-1 transition-colors">
-                      Change
-                    </span>
-                    <input
-                      type="file"
-                      accept=".txt,.vtt,audio/*"
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-                      className="hidden"
-                    />
-                  </label>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    title="Remove file"
-                    onClick={() => {
-                      setAudioFileName(null);
-                      setAudioSourcePath(null);
-                      setTranscriptText("");
-                      setSourceKind("paste");
-                    }}
-                  >
-                    <X size={14} />
-                  </Button>
-                </div>
+            {/* Unified Multi-File Dropzone */}
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleFileDrop}
+              className="border-2 border-dashed border-border/60 hover:border-primary/50 rounded-xl p-5 text-center bg-background/60 transition-colors flex flex-col items-center justify-center gap-2"
+            >
+              <UploadCloud className="w-8 h-8 text-primary/80" />
+              <div className="text-sm font-medium text-foreground">
+                Drop audio (.mp3, .wav, .m4a) or transcript (.txt, .vtt) files here
               </div>
-            ) : (
-              <div
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleFileDrop}
-                className="border-2 border-dashed border-border/50 hover:border-primary/50 rounded-xl p-6 text-center bg-surface-1/20 transition-colors flex flex-col items-center justify-center gap-2"
-              >
-                <UploadCloud className="w-8 h-8 text-muted-foreground" />
-                <div className="text-sm font-medium text-foreground">
-                  Drop audio (.mp3, .wav, .m4a) or transcript (.txt, .vtt) here
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Audio is transcribed locally. Transcript stays entirely on your machine.
-                </p>
-                <div className="flex items-center gap-3 mt-2">
-                  <label className="cursor-pointer">
-                    <span className="inline-flex items-center justify-center h-8 px-3 rounded-md bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 transition-colors">
-                      Browse file
-                    </span>
-                    <input
-                      type="file"
-                      accept=".txt,.vtt,audio/*"
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-                      className="hidden"
-                    />
-                  </label>
+              <p className="text-xs text-muted-foreground max-w-md">
+                Files remain entirely on your device. Drop multiple files together to upload retrospective and standup logs at once.
+              </p>
+              <div className="flex items-center gap-3 mt-1">
+                <label className="cursor-pointer">
+                  <span className="inline-flex items-center justify-center h-8 px-4 rounded-md bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 transition-colors">
+                    Browse files
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".txt,.vtt,audio/*"
+                    onChange={(e) => e.target.files?.length && handleBatchFileUpload(e.target.files)}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Unified List of Uploaded Meetings & Transcripts */}
+            {(audioFileName || transcriptText || supportingMeetings.length > 0) && (
+              <div className="space-y-2 pt-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block px-0.5">
+                  Uploaded Sprint Files ({(audioFileName || transcriptText ? 1 : 0) + supportingMeetings.length})
+                </label>
+
+                {/* Primary Retro Item Card */}
+                {(audioFileName || transcriptText) && (
+                  <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <FileText size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={audioFileName || "Primary Retrospective Transcript"}
+                            onChange={(e) => setAudioFileName(e.target.value)}
+                            className="text-xs font-semibold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none truncate"
+                            placeholder="Primary Retro Title..."
+                          />
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
+                            Primary Retro (Never Summarized)
+                          </span>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-background/80 text-muted-foreground shrink-0 border border-border/40">
+                            {sourceKind === "audio"
+                              ? "Audio"
+                              : audioFileName?.toLowerCase().endsWith(".vtt")
+                              ? "VTT"
+                              : "Text"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          Authoritative primary analysis source · ~
+                          {transcriptText.trim().split(/\s+/).filter(Boolean).length.toLocaleString()} words
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                      title="Remove Primary Retro"
+                      onClick={() => {
+                        setAudioFileName(null);
+                        setAudioSourcePath(null);
+                        setTranscriptText("");
+                        setSourceKind("paste");
+                      }}
+                    >
+                      <X size={14} />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Supporting Meeting Cards */}
+                {supportingMeetings.map((meeting) => (
+                  <div
+                    key={meeting.id}
+                    className="p-3 rounded-xl border border-border/50 bg-background flex items-center justify-between gap-3 text-xs shadow-2xs"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-8 w-8 rounded-lg bg-surface-2 text-muted-foreground flex items-center justify-center shrink-0">
+                        <FileText size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={meeting.title}
+                            onChange={(e) => handleUpdateSupportingTitle(meeting.id, e.target.value)}
+                            className="text-xs font-semibold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none truncate"
+                            placeholder="Meeting title..."
+                          />
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                            Supporting Context
+                          </span>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground shrink-0">
+                            {meeting.sourceKind === "paste" ? "Pasted" : meeting.fileName?.endsWith(".vtt") ? "VTT" : "TXT"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          Supporting meeting context · ~{meeting.wordCount || 0} words
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePromoteToPrimaryRetro(meeting)}
+                        className="h-7 text-[11px] px-2.5 font-medium border-border/60 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors"
+                        title="Set this file as the primary retrospective transcript"
+                      >
+                        Set as Primary Retro
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleRemoveSupportingMeeting(meeting.id)}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                        title="Remove meeting"
+                      >
+                        <X size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Combined Token Context Budget Bar */}
+                <div className="pt-1 flex items-center justify-between text-[11px] text-muted-foreground px-1">
+                  <span>
+                    Total Context: ~
+                    {(
+                      (transcriptText ? transcriptText.trim().split(/\s+/).filter(Boolean).length : 0) +
+                      supportingMeetings.reduce((sum, m) => sum + (m.wordCount || 0), 0)
+                    ).toLocaleString()}{" "}
+                    words across {(transcriptText ? 1 : 0) + supportingMeetings.length} file
+                    {(transcriptText ? 1 : 0) + supportingMeetings.length === 1 ? "" : "s"}
+                  </span>
+                  <span className="text-primary/80 font-medium">
+                    Primary Retro is passed in full · Supporting context scales to model limit
+                  </span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Transcript Textarea */}
+          {/* Primary Retro Transcript Textarea */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Transcript (editable)
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+              <span>Primary Retrospective Transcript (Editable)</span>
+              <span className="text-[10px] normal-case text-muted-foreground font-normal">
+                This main retro transcript is analyzed in full and will never be summarized or truncated.
+              </span>
             </label>
             <textarea
               value={transcriptText}

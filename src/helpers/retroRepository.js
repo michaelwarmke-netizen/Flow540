@@ -308,6 +308,16 @@ function runRetroMigrations(db) {
     });
     migrateV5();
   }
+
+  if (currentVersion < 6) {
+    const migrateV6 = db.transaction(() => {
+      try {
+        db.exec(`ALTER TABLE retrospectives ADD COLUMN supporting_transcripts TEXT;`);
+      } catch (_) {}
+      db.pragma("user_version = 6");
+    });
+    migrateV6();
+  }
 }
 
 class RetroRepository {
@@ -411,16 +421,19 @@ class RetroRepository {
     return this.getSprintSnapshot(sprintId);
   }
 
-  async createRetrospective({ sprintId, title, transcript, sourceKind, audioPath, meetingOwner }) {
+  async createRetrospective({ sprintId, title, transcript, sourceKind, audioPath, meetingOwner, supportingMeetings }) {
     const id = randomUUID();
     const retroTitle = title || `Retrospective — ${new Date().toLocaleDateString()}`;
+    const supportingJson = supportingMeetings?.length
+      ? JSON.stringify(supportingMeetings)
+      : null;
 
     this.db
       .prepare(`
-        INSERT INTO retrospectives (id, title, sprint_id, transcript, source_kind, audio_path, meeting_owner, processing_state)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'idle')
+        INSERT INTO retrospectives (id, title, sprint_id, transcript, source_kind, audio_path, meeting_owner, supporting_transcripts, processing_state)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'idle')
       `)
-      .run(id, retroTitle, sprintId, transcript || "", sourceKind || "text", audioPath || null, meetingOwner || null);
+      .run(id, retroTitle, sprintId, transcript || "", sourceKind || "text", audioPath || null, meetingOwner || null, supportingJson);
 
     return this.getRetrospective(id);
   }
@@ -469,6 +482,14 @@ class RetroRepository {
     if (data.meeting_owner !== undefined) {
       fields.push("meeting_owner = ?");
       values.push(data.meeting_owner);
+    }
+    if (data.supporting_transcripts !== undefined) {
+      fields.push("supporting_transcripts = ?");
+      values.push(
+        typeof data.supporting_transcripts === "string"
+          ? data.supporting_transcripts
+          : JSON.stringify(data.supporting_transcripts)
+      );
     }
 
     if (fields.length > 0) {

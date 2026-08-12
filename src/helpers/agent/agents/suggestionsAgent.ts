@@ -25,6 +25,7 @@ export interface SuggestionsAgentOptions {
       blockers?: string;
     };
     previousActionItems?: string[];
+    supportingMeetings?: { title: string; transcript: string; meetingDate?: string | null }[];
   };
   model?: string;
   provider?: 'gemini' | 'anthropic' | 'openai' | 'ollama';
@@ -115,6 +116,13 @@ export async function runSuggestionsAgent(
     }
     if (options.context.previousActionItems?.length) {
       prompt += `- Carried Over Action Items: ${options.context.previousActionItems.join(', ')}\n`;
+    }
+    if (options.context.supportingMeetings?.length) {
+      prompt += `\nSupporting Sprint Meetings & Mid-Sprint Discussions:\n`;
+      for (const m of options.context.supportingMeetings) {
+        prompt += `\n--- [${m.title}${m.meetingDate ? ` — ${m.meetingDate}` : ''}] ---\n${m.transcript}\n`;
+      }
+      prompt += `\nInstruction: Synthesize trends between problems raised during mid-sprint meetings and retro discussion points to provide deeper process suggestions. Identify recurring blockers, unaddressed concerns, and patterns that span multiple meetings.\n`;
     }
   }
 

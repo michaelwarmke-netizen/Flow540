@@ -15,6 +15,7 @@ export interface ActionItemExtractionOptions {
     teamMembers?: string[];
     projectContext?: string;
     sprintId?: string;
+    supportingMeetings?: { title: string; transcript: string; meetingDate?: string | null }[];
   };
   /** Optional AI model or provider overrides. */
   model?: string;
@@ -97,6 +98,13 @@ export async function runActionItemAgent(
     if (options.context.teamMembers?.length) prompt += `- Known Team Members: ${options.context.teamMembers.join(', ')}\n`;
     if (options.context.projectContext) prompt += `- Project Context: ${options.context.projectContext}\n`;
     if (options.context.sprintId) prompt += `- Sprint ID: ${options.context.sprintId}\n`;
+    if (options.context.supportingMeetings?.length) {
+      prompt += `\nSupporting Sprint Meetings (for cross-referencing blockers & commitments made mid-sprint):\n`;
+      for (const m of options.context.supportingMeetings) {
+        prompt += `\n--- Meeting: ${m.title} (${m.meetingDate || 'During Sprint'}) ---\n${m.transcript}\n`;
+      }
+      prompt += `\nNote: The PRIMARY retrospective transcript above is the authoritative source. Use these supporting meetings only to corroborate or add context to action items found in the primary transcript.\n`;
+    }
   }
 
   const targetModel = options.model || config.llm.model;

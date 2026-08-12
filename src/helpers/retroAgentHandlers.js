@@ -296,10 +296,57 @@ class RetroAgentHandlers {
     const meetingOwner = retro.meeting_owner || settings.meetingOwner || settings.uploaderIdentity || "Unassigned";
     const modelOpts = this._resolveAgentModelSettings(settings);
 
+    // Calculate available token budget for supporting context
+    let supportingMeetings = [];
+    if (retro.supporting_transcripts) {
+      try {
+        const parsed = typeof retro.supporting_transcripts === "string"
+          ? JSON.parse(retro.supporting_transcripts)
+          : retro.supporting_transcripts;
+
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const modelDesc = await this.describeRetroModel(settings).catch(() => ({ contextLength: 4096 }));
+          const totalBudgetTokens = modelDesc?.contextLength || 4096;
+          const CHARS_PER_TOKEN = 3.5;
+          const FIXED_OVERHEAD_TOKENS = 2500;
+          const primaryTokens = Math.ceil((retro.transcript || "").length / CHARS_PER_TOKEN);
+          const supportingBudgetTokens = Math.max(0, totalBudgetTokens - FIXED_OVERHEAD_TOKENS - primaryTokens);
+          const supportingBudgetChars = Math.floor(supportingBudgetTokens * CHARS_PER_TOKEN);
+
+          // Sort by meeting date descending (most recent first)
+          const sorted = [...parsed].sort((a, b) => (b.meetingDate || "").localeCompare(a.meetingDate || ""));
+
+          let usedChars = 0;
+          for (const m of sorted) {
+            const entryChars = (m.transcript || "").length + (m.title || "").length + 50;
+            if (usedChars + entryChars <= supportingBudgetChars) {
+              supportingMeetings.push({ title: m.title, transcript: m.transcript, meetingDate: m.meetingDate });
+              usedChars += entryChars;
+            } else if (usedChars < supportingBudgetChars) {
+              const remaining = supportingBudgetChars - usedChars - 80;
+              if (remaining > 200) {
+                supportingMeetings.push({
+                  title: m.title,
+                  transcript: m.transcript.substring(0, remaining) + "\n[...truncated]",
+                  meetingDate: m.meetingDate,
+                });
+              }
+              break;
+            } else {
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        debugLogger.warn("Failed to parse supporting_transcripts JSON", { error: e.message });
+      }
+    }
+
     const context = {
       meetingTitle: retro.title || `Retrospective ${retrospectiveId}`,
       sprintId: retro.sprint_id,
       projectContext: sprint ? `Sprint: ${sprint.name}` : undefined,
+      supportingMeetings: supportingMeetings.length > 0 ? supportingMeetings : undefined,
       sprintMetrics: sprint
         ? {
             name: sprint.name,

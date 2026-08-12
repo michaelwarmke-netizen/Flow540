@@ -16,6 +16,16 @@ export interface SprintSnapshot {
   is_user_edited: number;
 }
 
+export interface SupportingMeeting {
+  id: string;
+  title: string;
+  transcript: string;
+  sourceKind: "text" | "paste";
+  meetingDate?: string | null;
+  fileName?: string | null;
+  wordCount?: number;
+}
+
 export interface Retrospective {
   id: string;
   title: string;
@@ -24,6 +34,7 @@ export interface Retrospective {
   source_kind: "audio" | "text" | "paste";
   audio_path: string | null;
   meeting_owner?: string | null;
+  supporting_transcripts?: SupportingMeeting[] | string | null;
   pending_proposals_count?: number;
   processing_state: "idle" | "transcribing" | "analyzing" | "review" | "completed";
   analysis_run_count: number;
@@ -191,6 +202,7 @@ export const retroClient = {
     sourceKind: "audio" | "text" | "paste";
     audioPath?: string;
     meetingOwner?: string;
+    supportingMeetings?: SupportingMeeting[];
   }) => invoke<Retrospective>("retro.create", data),
   getRetro: (id: string) => invoke<Retrospective | null>("retro.get", { id }),
   updateRetro: (id: string, updates: Partial<Retrospective>) =>
