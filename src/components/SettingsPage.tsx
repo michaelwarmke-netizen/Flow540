@@ -36,6 +36,7 @@ import {
   Upload,
   Languages,
   Zap,
+  Server,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { AUTH_URL, signOut, deleteAccount } from "../lib/auth";
@@ -107,6 +108,7 @@ import { formatBytes } from "../utils/formatBytes";
 import { useSettingsStore } from "../stores/settingsStore";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
 import WorkspaceSection from "./settings/WorkspaceSection";
+import McpAgentToolsSettings from "./settings/McpAgentToolsSettings";
 import { WORKSPACES_ENABLED } from "../lib/features";
 
 const formatAmount = (cents: number, currency: string) =>
@@ -117,6 +119,7 @@ export type SettingsSectionType =
   | "hotkeys"
   | "speechToText"
   | "llms"
+  | "integrations"
   | "permissions"
   | "privacyData"
   | "system";
@@ -3112,6 +3115,15 @@ EOF`,
           />
         </TabPanel>
       )}
+      <TabPanel active={activeSection === "integrations"}>
+        <div className="space-y-4">
+          <SectionHeader
+            title="Integrations & MCP Tools"
+            description="Configure Model Context Protocol (MCP) servers, OAuth authorization gateways, and inspect agent tools."
+          />
+          <McpAgentToolsSettings />
+        </div>
+      </TabPanel>
       {renderSectionContent()}
     </>
   );

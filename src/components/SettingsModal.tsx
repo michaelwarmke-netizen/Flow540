@@ -10,6 +10,7 @@ import {
   CreditCard,
   Shield,
   Users,
+  Server,
 } from "lucide-react";
 import SidebarModal, { type SidebarItem } from "./ui/SidebarModal";
 import SettingsPage, { SettingsSectionType } from "./SettingsPage";
@@ -27,6 +28,9 @@ const SECTION_ALIASES: Record<string, SettingsSectionType> = {
   retroAnalyst: "llms",
   agentConfig: "llms",
   agentMode: "llms",
+  mcpTools: "llms",
+  agentTools: "llms",
+  mcp: "llms",
   intelligence: "llms",
   meetings: "llms",
   prompts: "llms",
@@ -44,6 +48,9 @@ const LEGACY_SUB_TAB: Record<string, string> = {
   intelligence: "dictationCleanup",
   agentMode: "chatIntelligence",
   agentConfig: "chatIntelligence",
+  mcpTools: "mcpTools",
+  agentTools: "mcpTools",
+  mcp: "mcpTools",
   aiModels: "dictationCleanup",
   aiProviders: "dictationCleanup",
   retroModel: "retroAnalyst",
@@ -87,6 +94,13 @@ export default function SettingsModal({ open, onOpenChange, initialSection }: Se
         label: t("settingsModal.sections.llms.label"),
         icon: Brain,
         description: t("settingsModal.sections.llms.description"),
+        group: t("settingsModal.groups.aiModels"),
+      },
+      {
+        id: "integrations",
+        label: t("settingsModal.sections.integrations.label"),
+        icon: Server,
+        description: t("settingsModal.sections.integrations.description"),
         group: t("settingsModal.groups.aiModels"),
       },
       {

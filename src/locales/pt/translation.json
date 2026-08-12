@@ -1064,6 +1064,10 @@
         "description": "Modelos para chat, limpeza e resumos",
         "label": "Modelos de linguagem"
       },
+      "integrations": {
+        "description": "Model Context Protocol e conexões MCP",
+        "label": "Integrações"
+      },
       "privacyData": {
         "description": "Privacidade, permissões e análise",
         "label": "Privacidade e dados"

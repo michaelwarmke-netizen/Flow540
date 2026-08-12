@@ -410,26 +410,6 @@ export default function RetrospectiveIntake({
           <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Sprint <span className="text-destructive">*</span>
           </label>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNewSprintOpen}
-              className="h-7 text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/10"
-            >
-              <Plus size={13} />
-              New Sprint
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleEditSprintOpen}
-              className="h-7 text-xs gap-1.5 text-primary hover:text-primary/90"
-            >
-              <Edit3 size={13} />
-              Edit metrics
-            </Button>
-          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">

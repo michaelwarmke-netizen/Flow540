@@ -1133,6 +1133,10 @@
         "description": "Modelos para chat, limpieza y resúmenes",
         "label": "Modelos de lenguaje"
       },
+      "integrations": {
+        "description": "Protocolo de contexto de modelo y herramientas MCP",
+        "label": "Integraciones"
+      },
       "privacyData": {
         "description": "Privacidad, permisos y análisis",
         "label": "Privacidad y datos"

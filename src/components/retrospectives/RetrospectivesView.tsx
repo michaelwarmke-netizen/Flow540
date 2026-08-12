@@ -165,8 +165,8 @@ export default function RetrospectivesView({ onOpenSettings }: RetrospectivesVie
           </div>
 
           {/* Project Selector */}
-          <div className="flex items-center gap-1.5 bg-surface-1 border border-border/60 px-2.5 py-1 rounded-lg text-xs">
-            <Folder size={14} className="text-muted-foreground" />
+          <div className="flex items-center gap-1.5 bg-surface-1 border border-border/60 px-2.5 py-1 rounded-lg text-xs max-w-[280px]">
+            <Folder size={14} className="text-muted-foreground shrink-0" />
             <select
               value={currentProject?.id || ""}
               onChange={(e) => {
@@ -177,20 +177,23 @@ export default function RetrospectivesView({ onOpenSettings }: RetrospectivesVie
                   if (found) setCurrentProject(found);
                 }
               }}
-              className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer truncate max-w-[200px]"
             >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.project_id})
-                </option>
-              ))}
+              {projects.map((p) => {
+                const displayName = p.name.length > 28 ? `${p.name.slice(0, 25)}...` : p.name;
+                return (
+                  <option key={p.id} value={p.id} title={`${p.name} (${p.project_id})`}>
+                    {displayName} ({p.project_id})
+                  </option>
+                );
+              })}
               <option value="NEW_PROJECT">+ Create New Project...</option>
             </select>
             <button
               type="button"
               onClick={() => fetchData()}
               disabled={isLoading}
-              className="p-0.5 rounded hover:bg-surface-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              className="p-0.5 rounded hover:bg-surface-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 shrink-0"
               title="Refresh projects from MCP server"
             >
               <RotateCcw size={12} className={isLoading ? "animate-spin" : ""} />
@@ -205,7 +208,7 @@ export default function RetrospectivesView({ onOpenSettings }: RetrospectivesVie
             onClick={() => setActiveTab("actions")}
             className={`px-3 py-1 rounded-md transition-all flex items-center gap-1.5 ${
               activeTab === "actions"
-                ? "bg-background text-foreground font-semibold shadow-xs"
+                ? "bg-blue-600 text-white font-semibold shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >

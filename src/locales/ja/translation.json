@@ -1085,6 +1085,10 @@
         "description": "クリーンアップ、ノートのフォーマット、チャット用のモデル",
         "label": "言語モデル"
       },
+      "integrations": {
+        "description": "Model Context Protocolおよび外部MCPツール接続",
+        "label": "統合"
+      },
       "privacyData": {
         "description": "プライバシー、権限、分析",
         "label": "プライバシーとデータ"

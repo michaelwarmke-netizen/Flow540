@@ -1085,6 +1085,10 @@
         "description": "Modelle für Chat, Bereinigung & Zusammenfassungen",
         "label": "Sprachmodelle"
       },
+      "integrations": {
+        "description": "Model Context Protocol & MCP-Werkzeuge",
+        "label": "Integrationen"
+      },
       "privacyData": {
         "description": "Datenschutz, Berechtigungen & Analyse",
         "label": "Datenschutz & Daten"

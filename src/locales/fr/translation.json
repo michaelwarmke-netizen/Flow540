@@ -1130,8 +1130,12 @@
         "label": "Reconnaissance vocale"
       },
       "llms": {
-        "description": "Modèles pour chat, nettoyage & résumés",
+        "description": "Modèles pour le chat, le nettoyage et les résumés",
         "label": "Modèles de langage"
+      },
+      "integrations": {
+        "description": "Protocole de contexte de modèle et outils MCP",
+        "label": "Intégrations"
       },
       "privacyData": {
         "description": "Confidentialité, permissions & analytique",

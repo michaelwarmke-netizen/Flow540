@@ -1085,6 +1085,10 @@
         "description": "Modelli per chat, pulizia e riassunti",
         "label": "Modelli linguistici"
       },
+      "integrations": {
+        "description": "Protocollo di contesto del modello e strumenti MCP",
+        "label": "Integrazioni"
+      },
       "privacyData": {
         "description": "Privacy, permessi e analisi",
         "label": "Privacy e dati"

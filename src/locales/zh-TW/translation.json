@@ -1085,6 +1085,10 @@
         "description": "用於清理、筆記格式化和聊天的模型",
         "label": "語言模型"
       },
+      "integrations": {
+        "description": "模型上下文協定與 MCP 工具連接",
+        "label": "整合"
+      },
       "privacyData": {
         "description": "隱私、權限與資料分析",
         "label": "隱私與資料"

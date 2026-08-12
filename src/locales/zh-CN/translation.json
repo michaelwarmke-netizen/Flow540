@@ -1085,6 +1085,10 @@
         "description": "用于清理、笔记格式化和聊天的模型",
         "label": "语言模型"
       },
+      "integrations": {
+        "description": "模型上下文协议与 MCP 工具连接",
+        "label": "集成"
+      },
       "privacyData": {
         "description": "隐私、权限与数据分析",
         "label": "隐私与数据"

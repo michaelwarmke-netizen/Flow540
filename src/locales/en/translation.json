@@ -1177,6 +1177,10 @@
         "description": "Models for chat, cleanup & summaries",
         "label": "Language Models"
       },
+      "integrations": {
+        "description": "Model Context Protocol & external MCP tool connections",
+        "label": "Integrations"
+      },
       "privacyData": {
         "description": "Privacy, local data retention & analytics",
         "label": "Privacy & Data"

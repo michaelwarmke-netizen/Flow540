@@ -1085,6 +1085,10 @@
         "description": "Модели для чата, очистки и резюме",
         "label": "Языковые модели"
       },
+      "integrations": {
+        "description": "Model Context Protocol и подсоединения MCP",
+        "label": "Интеграции"
+      },
       "privacyData": {
         "description": "Конфиденциальность, разрешения и аналитика",
         "label": "Конфиденциальность и данные"
