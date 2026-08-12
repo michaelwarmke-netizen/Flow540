@@ -18,6 +18,45 @@ export async function createAiSdkToolsFromMcp(
 }
 
 /**
+ * Sanitizes and cleans up raw JSON schema from MCP servers.
+ * Strips `$schema` and injects fallback parameters if properties are empty.
+ */
+function cleanJsonSchema(rawSchema?: Record<string, unknown>): Record<string, unknown> {
+  if (!rawSchema || typeof rawSchema !== 'object') {
+    return {
+      type: 'object',
+      properties: {
+        message: { type: 'string', description: 'Notification message or body text' },
+        recipient: { type: 'string', description: 'Recipient name, email, or channel' },
+        channel: { type: 'string', description: 'Delivery channel e.g. slack or email' },
+      },
+    };
+  }
+
+  const cleaned: Record<string, unknown> = { ...rawSchema };
+  delete cleaned['$schema'];
+
+  if (!cleaned.type) {
+    cleaned.type = 'object';
+  }
+
+  if (
+    !cleaned.properties ||
+    typeof cleaned.properties !== 'object' ||
+    Object.keys(cleaned.properties as object).length === 0
+  ) {
+    cleaned.properties = {
+      message: { type: 'string', description: 'Notification message or content' },
+      recipient: { type: 'string', description: 'Target recipient or channel' },
+      channel: { type: 'string', description: 'Delivery channel' },
+      subject: { type: 'string', description: 'Email subject line' },
+    };
+  }
+
+  return cleaned;
+}
+
+/**
  * Converts a list of {@link McpTool} definitions into Vercel AI SDK tools.
  */
 export function bridgeMcpToolList(
@@ -27,14 +66,12 @@ export function bridgeMcpToolList(
   const bridged: Record<string, any> = {};
 
   for (const t of tools) {
-    const parameters =
-      t.inputSchema && typeof t.inputSchema === 'object' && Object.keys(t.inputSchema).length > 0
-        ? jsonSchema(t.inputSchema as any)
-        : z.record(z.string(), z.unknown());
+    const cleanedSchema = cleanJsonSchema(t.inputSchema);
+    logger.info(`Bridged MCP tool '${t.name}' schema:\n${JSON.stringify(cleanedSchema, null, 2)}`);
 
     bridged[t.name] = tool({
       description: t.description ?? `MCP Tool: ${t.name}`,
-      parameters,
+      parameters: jsonSchema(cleanedSchema as any),
       execute: async (args: any) => {
         logger.info(`Executing tool '${t.name}' with args:\n${JSON.stringify(args, null, 2)}`);
         try {

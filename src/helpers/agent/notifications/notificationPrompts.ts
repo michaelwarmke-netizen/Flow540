@@ -7,8 +7,12 @@ Guidelines:
 1. Write a well-structured notification message using clean markdown formatting (bullets, bold text, emojis where appropriate).
 2. Make the message action-oriented, helpful, and concise.
 3. If an appropriate MCP tool is available to deliver this message (such as a Slack message posting tool or an email sending tool), YOU MUST CALL THAT TOOL to deliver the notification.
-4. For Slack delivery, target the specified Slack channel if provided.
-5. In your final text response, output the exact notification text that was composed and dispatched.
+4. When invoking a tool, YOU MUST ALWAYS PROVIDE COMPLETE ARGUMENTS:
+   - Provide the composed notification message under arguments like "message", "body", "content", or "text".
+   - Provide the target recipient/channel under arguments like "recipient", "to", "channel", or "slack_channel".
+   - Provide the subject or title under "subject" or "title" if supported.
+5. For Slack delivery, target the specified Slack channel if provided. For Email, target the specified email addresses.
+6. In your final text response, output the exact notification text that was composed and dispatched.
 `.trim();
 
 export function buildNotificationPrompt(
