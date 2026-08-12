@@ -38,8 +38,22 @@ export interface Retrospective {
   pending_proposals_count?: number;
   processing_state: "idle" | "transcribing" | "analyzing" | "review" | "completed";
   analysis_run_count: number;
+  speaker_balance_score?: number | null;
+  topic_coverage_score?: number | null;
+  speaker_distribution_json?: string | null;
+  topic_coverage_details_json?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface MetricsSummary {
+  speakerBalance: number | null;
+  topicCoverage: number | null;
+  speakerDistribution: Array<{ speaker: string; wordCount: number; turnCount: number; percentage: number }> | null;
+  topicCoverageDetails: Array<{ topicId: string; title: string; status: "discussed" | "partially_discussed" | "missed"; evidenceQuote?: string | null }> | null;
+  actionFollowThrough: number | null;
+  actionCompleted: number;
+  actionTotal: number;
 }
 
 export interface RetroProposal {
@@ -286,6 +300,7 @@ export const retroClient = {
   listOutcomes: (retrospectiveId: string) => invoke<CoachTopicOutcome[]>("coach.listOutcomes", { retrospectiveId }),
   listInsights: (projectId?: string) => invoke<CoachInsight[]>("coach.listInsights", { projectId }),
   listSlackNotifications: (projectId?: string) => invoke<CoachSlackNotification[]>("coach.listSlackNotifications", { projectId }),
+  getMetricsSummary: (projectId?: string) => invoke<MetricsSummary>("coach.getMetricsSummary", { projectId }),
   sendSlack: (data: { projectId?: string; recipientName: string; messageType: string; channel?: string; content?: string; settings?: any }) =>
     invoke<CoachSlackNotification>("coach.sendSlack", {
       ...data,

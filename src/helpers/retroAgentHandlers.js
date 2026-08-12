@@ -8,6 +8,8 @@ const { deduplicateProposals } = require("../utils/retroDedup.ts");
 const { parseRetroResponse, buildRepairPrompt } = require("../utils/retroResponseParser.ts");
 const { runActionItemAgent } = require("./agent/agents/actionItemAgent.ts");
 const { runSuggestionsAgent } = require("./agent/agents/suggestionsAgent.ts");
+const { runTopicCoverageAgent } = require("./agent/agents/topicCoverageAgent.ts");
+const { calculateSpeakerBalance } = require("../utils/transcriptAnalytics.ts");
 
 class RetroAgentHandlers {
   constructor(databaseManager, broadcastToWindows, mcpClient) {
@@ -81,6 +83,7 @@ class RetroAgentHandlers {
       "coach.listSlackNotifications",
       "coach.sendSlack",
       "coach.runMidSprintFollowup",
+      "coach.getMetricsSummary",
       "demo.resetData",
     ]);
 
@@ -189,6 +192,8 @@ class RetroAgentHandlers {
         return this.sendSlackNotification(payload);
       case "coach.runMidSprintFollowup":
         return this.runMidSprintFollowup(payload.projectId, payload.sprintId);
+      case "coach.getMetricsSummary":
+        return repo.getMetricsSummary(payload?.projectId);
       case "demo.resetData":
         return repo.resetDemoData();
       default:
@@ -362,6 +367,9 @@ class RetroAgentHandlers {
         : undefined,
     };
 
+    // Speaker Balance: Pure deterministic calculation (instant)
+    const speakerResult = calculateSpeakerBalance(retro.transcript);
+
     // Agent 1: Run ActionItemAgent to extract explicit commitments
     const actionResult = await runActionItemAgent({
       transcript: retro.transcript || "",
@@ -386,6 +394,27 @@ class RetroAgentHandlers {
 
     if (!coachResult.success) {
       debugLogger.warn("SuggestionsAgent analysis failed", { error: coachResult.error });
+    }
+
+    // Agent 3: Run TopicCoverageAgent if accepted coach topics exist for this sprint
+    let topicCoverageResult = null;
+    try {
+      if (retro.project_id && retro.sprint_id) {
+        const allTopics = await repo.listTopics(retro.project_id);
+        const acceptedTopics = allTopics.filter(
+          (t) => t.sprint_id === retro.sprint_id && t.state === "accepted"
+        );
+        if (acceptedTopics.length > 0) {
+          topicCoverageResult = await runTopicCoverageAgent({
+            transcript: retro.transcript || "",
+            topics: acceptedTopics,
+            provider: modelOpts.provider,
+            model: modelOpts.model,
+          });
+        }
+      }
+    } catch (covErr) {
+      debugLogger.warn("TopicCoverageAgent analysis failed (non-fatal)", { error: covErr.message });
     }
 
     emitProgress("parsing", 2, 2);
@@ -433,7 +462,16 @@ class RetroAgentHandlers {
     const nextRunCount = (retro.analysis_run_count || 0) + 1;
     const saved = await repo.saveProposals(retrospectiveId, deduped, nextRunCount);
 
-    await repo.updateRetrospective(retrospectiveId, { processing_state: "completed" });
+    // Save analytics to retrospective record
+    await repo.updateRetrospective(retrospectiveId, {
+      processing_state: "completed",
+      speaker_balance_score: speakerResult?.score ?? null,
+      speaker_distribution_json: speakerResult ? JSON.stringify(speakerResult.speakers) : null,
+      topic_coverage_score: topicCoverageResult?.topicCoverageScore ?? null,
+      topic_coverage_details_json: topicCoverageResult?.topics
+        ? JSON.stringify(topicCoverageResult.topics)
+        : null,
+    });
     emitProgress("completed", 2, 2);
 
     // --- Autonomous Notification Trigger Dispatch ---

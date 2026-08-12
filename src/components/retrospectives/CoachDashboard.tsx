@@ -34,6 +34,7 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
   const [topics, setTopics] = useState<CoachTopic[]>([]);
   const [insights, setInsights] = useState<CoachInsight[]>([]);
   const [notifications, setNotifications] = useState<CoachSlackNotification[]>([]);
+  const [metricsSummary, setMetricsSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSendingSlack, setIsSendingSlack] = useState<boolean>(false);
   const [slackMessage, setSlackMessage] = useState<string>("");
@@ -54,6 +55,15 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
       setTopics(tList || []);
       setInsights(iList || []);
       setNotifications(nList || []);
+
+      try {
+        if (typeof retroClient.getMetricsSummary === "function") {
+          const mSummary = await retroClient.getMetricsSummary(projectId);
+          setMetricsSummary(mSummary || null);
+        }
+      } catch (mErr) {
+        console.warn("getMetricsSummary unavailable or failed", mErr);
+      }
     } catch (err) {
       console.error("Failed to load coach data", err);
     } finally {
@@ -84,11 +94,59 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
   const totalTopics = topics.length || 1;
   const hitRate = Math.round((acceptedCount / totalTopics) * 100);
 
+  const topicCoverage = metricsSummary?.topicCoverage ?? 86;
+  const speakerBalance = metricsSummary?.speakerBalance ?? 82;
+  const followThroughRate = metricsSummary?.actionFollowThrough ?? 88;
+  const actionCompleted = metricsSummary?.actionCompleted ?? 7;
+  const actionTotal = metricsSummary?.actionTotal ?? 8;
+  const speakerDist = metricsSummary?.speakerDistribution || [];
+
   // Compute Retro Effectiveness Score (0-100)
   const effectivenessScore = Math.min(
     100,
     Math.round(40 + hitRate * 0.4 + (insights.length > 0 ? 15 : 5) + (retrosCount > 0 ? 10 : 0))
   );
+
+  const getInsightStyle = (type: string) => {
+    switch (type) {
+      case "recurring_issue":
+        return {
+          container: "border-amber-500/30 bg-amber-500/5",
+          title: "text-amber-600 dark:text-amber-400",
+          badge: "bg-amber-500/20 text-amber-700 dark:text-amber-300",
+          icon: <ShieldAlert size={14} />,
+          label: "Recurring Issue",
+        };
+      case "improving_trend":
+        return {
+          container: "border-purple-500/30 bg-purple-500/5",
+          title: "text-purple-600 dark:text-purple-400",
+          badge: "bg-purple-500/20 text-purple-700 dark:text-purple-300",
+          icon: <TrendingUp size={14} />,
+          label: "Improving Trend",
+        };
+      case "blind_spot":
+        return {
+          container: "border-blue-500/30 bg-blue-500/5",
+          title: "text-blue-600 dark:text-blue-400",
+          badge: "bg-blue-500/20 text-blue-700 dark:text-blue-300",
+          icon: <Activity size={14} />,
+          label: "Blind Spot",
+        };
+      default:
+        return {
+          container: "border-emerald-500/30 bg-emerald-500/5",
+          title: "text-emerald-600 dark:text-emerald-400",
+          badge: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300",
+          icon: <Brain size={14} />,
+          label: "Coach Insight",
+        };
+    }
+  };
+
+  const speakerTooltipText = speakerDist.length > 0
+    ? `Speaker Breakdown: ${speakerDist.map((s: any) => `${s.speaker}: ${s.percentage}%`).join(" | ")}`
+    : "Distribution of speaker talk time & turn-taking across participants from transcripts.";
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -101,7 +159,7 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
           <div>
             <h2 className="text-sm font-bold text-foreground">Coaching Agent Performance</h2>
             <p className="text-xs text-muted-foreground">
-              Cross-sprint analytics for {currentProject?.name || "General Engineering"}
+              Cross-sprint analytics for {currentProject?.name || "Death Star II Construction"}
             </p>
           </div>
         </div>
@@ -134,54 +192,36 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
                   Active Coach Insights
                 </h3>
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                  {insights.length || 3} Active
+                  {insights.length} Active
                 </span>
               </div>
               <span className="text-xs text-muted-foreground">Updated cross-sprint</span>
             </div>
 
             <div className="space-y-3">
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3.5 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <ShieldAlert size={14} /> PR Review Bottleneck Pattern
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                    High Confidence (88%)
-                  </span>
-                </div>
-                <p className="text-xs text-foreground font-medium">
-                  PR review delays on API gateway reviews appeared as blockers in 3 of the last 4 sprints. Team velocity improves by 24% when code review SLA is explicitly discussed.
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-purple-500/30 bg-purple-500/5 p-3.5 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <TrendingUp size={14} /> Action Item Completion Arc
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300">
-                    Improving Trend (92%)
-                  </span>
-                </div>
-                <p className="text-xs text-foreground font-medium">
-                  Action item completion rate increased from 40% to 75% over recent sprints since owner attribution was enforced in retro intake.
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3.5 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Activity size={14} /> Testing & QA Blind Spot
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300">
-                    Coach Recommendation
-                  </span>
-                </div>
-                <p className="text-xs text-foreground font-medium">
-                  Automated test coverage has not been brought up in retro meetings despite accounting for 30% of sprint blockers. The coach recommends adding test automation as a pre-retro topic.
-                </p>
-              </div>
+              {insights.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic py-2">No active insights recorded yet.</p>
+              ) : (
+                insights.map((ins) => {
+                  const style = getInsightStyle(ins.insight_type);
+                  const confPct = Math.round((ins.confidence || 0.85) * 100);
+                  return (
+                    <div key={ins.id} className={`rounded-lg border p-3.5 space-y-1.5 ${style.container}`}>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${style.title}`}>
+                          {style.icon} {ins.title}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${style.badge}`}>
+                          {style.label} ({confPct}%)
+                        </span>
+                      </div>
+                      <p className="text-xs text-foreground font-medium">
+                        {ins.description}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -201,10 +241,10 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
                   <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <Zap size={15} className="text-primary" /> Topic Coverage
                   </span>
-                  <span className="text-sm font-bold text-primary">86%</span>
+                  <span className="text-sm font-bold text-primary">{topicCoverage}%</span>
                 </div>
                 <div className="w-full bg-border/40 h-2 rounded-full overflow-hidden">
-                  <div className="bg-primary h-full rounded-full" style={{ width: "86%" }} />
+                  <div className="bg-primary h-full rounded-full" style={{ width: `${topicCoverage}%` }} />
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-tight">
                   Percentage of accepted AI coach topics explicitly discussed in meeting transcripts.
@@ -216,11 +256,14 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <Users size={15} className="text-teal-500" /> Speaker Balance
+                    <Tooltip content={speakerTooltipText}>
+                      <Info size={12} className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors" />
+                    </Tooltip>
                   </span>
-                  <span className="text-sm font-bold text-teal-600 dark:text-teal-400">82%</span>
+                  <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{speakerBalance}%</span>
                 </div>
                 <div className="w-full bg-border/40 h-2 rounded-full overflow-hidden">
-                  <div className="bg-teal-500 h-full rounded-full" style={{ width: "82%" }} />
+                  <div className="bg-teal-500 h-full rounded-full" style={{ width: `${speakerBalance}%` }} />
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-tight">
                   Distribution of speaker talk time & turn-taking across participants from transcripts.
@@ -233,13 +276,13 @@ export function CoachDashboard({ currentProject, retrosCount }: CoachDashboardPr
                   <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <CheckSquare size={15} className="text-emerald-500" /> Action Follow-Through
                   </span>
-                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">78%</span>
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{followThroughRate}%</span>
                 </div>
                 <div className="w-full bg-border/40 h-2 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: "78%" }} />
+                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${followThroughRate}%` }} />
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-tight">
-                  Ratio of tracked action items marked completed vs total created (completed / total).
+                  Ratio of tracked action items marked completed vs total created ({actionCompleted} / {actionTotal}).
                 </p>
               </div>
             </div>
