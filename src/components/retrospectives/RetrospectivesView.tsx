@@ -202,7 +202,7 @@ export default function RetrospectivesView({ onOpenSettings }: RetrospectivesVie
         </div>
 
         {/* Top-Level Tabs */}
-        <div className="flex items-center p-0.5 rounded-lg bg-surface-1 border border-border/50 text-xs font-medium">
+        <div className="flex items-center p-0.5 rounded-lg bg-surface-1 border border-border/50 text-xs font-medium ml-auto">
           <button
             type="button"
             onClick={() => setActiveTab("actions")}
