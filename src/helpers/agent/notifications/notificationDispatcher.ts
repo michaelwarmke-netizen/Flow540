@@ -125,7 +125,7 @@ export class NotificationDispatcher {
           provider: this.modelOpts?.provider,
           model: this.modelOpts?.model,
           apiKey: this.modelOpts?.apiKey,
-          maxSteps: 4,
+          maxSteps: 25,
         },
         this.mcpClient
       );
