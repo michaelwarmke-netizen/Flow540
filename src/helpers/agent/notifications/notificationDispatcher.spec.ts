@@ -92,4 +92,17 @@ describe('NotificationDispatcher & Prompts', () => {
       }
     );
   });
+
+  it('buildNotificationPrompt includes MCP team resolution directive when team emails are unconfigured', () => {
+    const context = {
+      projectId: 'proj-1',
+      projectIdCode: 'PROJ-GENENG',
+    };
+
+    const prompt = buildNotificationPrompt('preRetroPreview', context, 'email', 'coach@flow.ai', '');
+
+    assert.match(prompt, /Delivery Channel: EMAIL/);
+    assert.match(prompt, /Project Code: PROJ-GENENG/);
+    assert.match(prompt, /MCP Team Resolution: Call an available MCP team lookup tool/);
+  });
 });

@@ -37,8 +37,8 @@ export class NotificationDispatcher {
    */
   async dispatch(
     triggerKey: TriggerKey,
-    context: NotificationDispatchContext,
-    options: { throwOnError?: boolean } = {}
+    context: NotificationDispatchContext & { channel?: DeliveryChannel },
+    options: { throwOnError?: boolean; channel?: DeliveryChannel } = {}
   ): Promise<DispatchResult> {
     let recipientName = 'Unknown';
     let targetProjectId = context.projectId || 'proj-default-gen-eng';
@@ -77,7 +77,7 @@ export class NotificationDispatcher {
         channel: 'slack',
       };
 
-      if (!triggerSetting.enabled) {
+      if (!triggerSetting.enabled && !options.channel) {
         logger.info(`Trigger '${triggerKey}' is disabled for project '${project.name}'; skipping.`);
         return {
           success: true,
@@ -88,20 +88,29 @@ export class NotificationDispatcher {
         };
       }
 
-      const channel: DeliveryChannel = triggerSetting.channel === 'email' ? 'email' : 'slack';
+      const overrideChannel = options.channel || context.channel;
+      const channel: DeliveryChannel =
+        overrideChannel === 'email'
+          ? 'email'
+          : overrideChannel === 'slack'
+          ? 'slack'
+          : triggerSetting.channel === 'email'
+          ? 'email'
+          : 'slack';
+
       const slackChannel = context.slackChannelId || project.slack_channel_id || '';
       recipientName =
         channel === 'email'
           ? config.teamEmails?.trim()
             ? `Email (${config.teamEmails.trim()})`
-            : 'Email (Team)'
+            : 'Email (Team via MCP Resolution)'
           : slackChannel.trim()
           ? `Slack (#${slackChannel.trim()})`
           : 'Slack (#general)';
 
       const prompt = buildNotificationPrompt(
         triggerKey,
-        { ...context, slackChannelId: slackChannel },
+        { ...context, slackChannelId: slackChannel, projectIdCode: project.project_id },
         channel,
         config.senderEmail,
         config.teamEmails

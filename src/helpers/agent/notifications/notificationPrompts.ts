@@ -5,30 +5,38 @@ You are an expert AI Agile Coach. Your task is to compose and dispatch a profess
 
 Guidelines:
 1. Write a well-structured notification message using clean markdown formatting (bullets, bold text, emojis where appropriate).
-2. Make the message action-oriented, helpful, and concise.
-3. If an appropriate MCP tool is available to deliver this message (such as a Slack message posting tool or an email sending tool), YOU MUST CALL THAT TOOL to deliver the notification.
-4. When invoking a tool, YOU MUST ALWAYS PROVIDE COMPLETE ARGUMENTS:
-   - Provide the composed notification message under arguments like "message", "body", "content", or "text".
-   - Provide the target recipient/channel under arguments like "recipient", "to", "channel", or "slack_channel".
-   - Provide the subject or title under "subject" or "title" if supported.
-5. For Slack delivery, target the specified Slack channel if provided. For Email, target the specified email addresses.
-6. In your final text response, output the exact notification text that was composed and dispatched.
+2. Target the specified Delivery Channel (EMAIL vs SLACK):
+   - For EMAIL delivery: Call an email sending tool (e.g. send_email, email_notification, or send_notification). If recipient email addresses are missing or not provided in the prompt, YOU MUST first call an MCP team lookup tool (e.g. get_team_members, get_project_team, or lookup_users) to resolve team member emails for the Project Code.
+   - For SLACK delivery: Call a Slack sending tool (e.g. send_slack_message or post_notification) targeting the specified Slack channel.
+3. When invoking any tool, YOU MUST ALWAYS PROVIDE COMPLETE ARGUMENTS:
+   - For email sending tools: pass "to" / "recipient" (email addresses), "subject", and "message" / "body".
+   - For team lookup tools: pass "project_id" or "team_id".
+   - For Slack tools: pass "channel" or "slack_channel", and "message" / "text".
+4. In your final text response, output the exact notification text that was composed and dispatched.
 `.trim();
 
 export function buildNotificationPrompt(
   triggerKey: TriggerKey,
-  context: NotificationDispatchContext,
+  context: NotificationDispatchContext & { projectIdCode?: string },
   channel: DeliveryChannel,
   senderEmail?: string,
   teamEmails?: string
 ): string {
   let prompt = `Trigger: ${triggerKey}\nDelivery Channel: ${channel.toUpperCase()}\n`;
+  if (context.projectIdCode || context.projectId) {
+    prompt += `Project Code: ${context.projectIdCode || context.projectId}\n`;
+  }
 
   if (channel === 'slack' && context.slackChannelId) {
     prompt += `Target Slack Channel: #${context.slackChannelId}\n`;
   } else if (channel === 'email') {
     if (senderEmail) prompt += `From Email: ${senderEmail}\n`;
-    if (teamEmails) prompt += `To Email: ${teamEmails}\n`;
+    if (teamEmails && teamEmails.trim()) {
+      prompt += `To Email: ${teamEmails.trim()}\n`;
+    } else {
+      prompt += `To Email: [Not provided in settings - resolve via MCP team lookup tool]\n`;
+      prompt += `MCP Team Resolution: Call an available MCP team lookup tool (e.g. get_team_members or get_project_team) using Project Code '${context.projectIdCode || context.projectId}' to retrieve recipient email addresses.\n`;
+    }
   }
 
   if (context.sprintName) prompt += `Sprint: ${context.sprintName}\n`;

@@ -69,7 +69,7 @@ export function bridgeMcpToolList(
     const cleanedSchema = cleanJsonSchema(t.inputSchema);
     logger.info(`Bridged MCP tool '${t.name}' schema:\n${JSON.stringify(cleanedSchema, null, 2)}`);
 
-    bridged[t.name] = tool({
+    bridged[t.name] = (tool as any)({
       description: t.description ?? `MCP Tool: ${t.name}`,
       parameters: jsonSchema(cleanedSchema as any),
       execute: async (args: any) => {

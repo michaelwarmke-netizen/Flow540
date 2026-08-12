@@ -350,6 +350,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
         projectId: currentProject.id,
         recipientName: recipient,
         messageType: key,
+        channel,
         content: `[TEST TRIGGER] Sample automated dispatch for '${title}' via ${channel.toUpperCase()}${
           channel === "email" && senderEmail ? ` (From: ${senderEmail})` : ""
         }.`,

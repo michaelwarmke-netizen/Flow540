@@ -605,12 +605,12 @@ class RetroAgentHandlers {
 
   async sendSlackNotification(payload) {
     const repo = this._getRetroRepository();
-    const { projectId, messageType } = payload;
+    const { projectId, messageType, channel } = payload;
     const targetProjectId = projectId || "proj-default-gen-eng";
 
     const dispatcher = this._getNotificationDispatcher(payload);
 
-    const context = { projectId: targetProjectId };
+    const context = { projectId: targetProjectId, channel };
 
     try {
       if (messageType === "preRetroPreview") {
@@ -630,7 +630,7 @@ class RetroAgentHandlers {
       debugLogger.warn("Context fetch error for test dispatch", { error: ctxErr.message });
     }
 
-    const result = await dispatcher.dispatch(messageType, context, { throwOnError: true });
+    const result = await dispatcher.dispatch(messageType, context, { throwOnError: true, channel });
 
     if (result.notificationRecordId) {
       const savedRow = repo.db?.prepare("SELECT * FROM coach_slack_notifications WHERE id = ?")?.get(result.notificationRecordId);
