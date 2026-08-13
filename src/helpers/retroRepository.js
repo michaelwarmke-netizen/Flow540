@@ -1005,6 +1005,13 @@ class RetroRepository {
     return Promise.resolve(rows);
   }
 
+  async clearSuggestedTopics(sprintId) {
+    if (!sprintId) return Promise.resolve(0);
+    const stmt = this.db.prepare("DELETE FROM coach_topics WHERE sprint_id = ? AND state = 'suggested'");
+    const res = stmt.run(sprintId);
+    return Promise.resolve(res.changes);
+  }
+
   async saveTopics(topics) {
     const transaction = this.db.transaction(() => {
       const stmt = this.db.prepare(`

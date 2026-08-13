@@ -33,6 +33,7 @@ import { parseVttToTranscript } from "../../utils/vttParser";
 
 interface RetrospectiveIntakeProps {
   sprints: SprintSnapshot[];
+  currentProject?: Project | null;
   uploaderIdentity?: string;
   onSprintUpdate: () => void;
   onAnalysisSuccess: (retroId: string) => void;
@@ -41,6 +42,7 @@ interface RetrospectiveIntakeProps {
 
 export default function RetrospectiveIntake({
   sprints,
+  currentProject,
   uploaderIdentity,
   onSprintUpdate,
   onAnalysisSuccess,
@@ -66,11 +68,11 @@ export default function RetrospectiveIntake({
     if (selectedSprintId) {
       loadTopicsForSprint(selectedSprintId);
     }
-  }, [selectedSprintId]);
+  }, [selectedSprintId, currentProject?.id]);
 
   const loadTopicsForSprint = async (sprintId: string) => {
     try {
-      const list = await retroClient.listTopics(undefined, sprintId);
+      const list = await retroClient.listTopics(currentProject?.id || undefined, sprintId);
       setCoachTopics(list || []);
     } catch (err) {
       console.warn("Failed to load topics for sprint", err);
@@ -81,7 +83,7 @@ export default function RetrospectiveIntake({
     if (!selectedSprintId) return;
     setIsGeneratingTopics(true);
     try {
-      const list = await retroClient.suggestCoachTopics(undefined, selectedSprintId);
+      const list = await retroClient.suggestCoachTopics(currentProject?.id || undefined, selectedSprintId);
       setCoachTopics(list || []);
     } catch (err) {
       console.error("Failed to suggest topics", err);

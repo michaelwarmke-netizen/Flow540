@@ -327,6 +327,7 @@ export default function RetrospectivesView({ onOpenSettings }: RetrospectivesVie
           </DialogHeader>
           <RetrospectiveIntake
             sprints={sprints}
+            currentProject={currentProject}
             uploaderIdentity={uploaderIdentity}
             onSprintUpdate={fetchData}
             onAnalysisSuccess={handleAnalysisSuccess}

@@ -517,9 +517,13 @@ class RetroAgentHandlers {
     const existingActions = await repo.listTrackedActions({ sprintId });
     const modelOpts = this._resolveAgentModelSettings(settings);
 
+    const allProjects = await repo.listProjects();
+    const fallbackProjectId = allProjects?.[0]?.id || "proj-default-gen-eng";
+    const targetProjectId = projectId || sprint?.project_id || fallbackProjectId;
+
     const defaultTopics = [
       {
-        project_id: projectId || "proj-default-gen-eng",
+        project_id: targetProjectId,
         sprint_id: sprintId,
         title: "Sprint Blocker Resolution & PR Review Delays",
         rationale: `Metrics show velocity impacted by blockers (${sprint?.blockers || "PR review delays"}).`,
@@ -528,7 +532,7 @@ class RetroAgentHandlers {
         state: "suggested",
       },
       {
-        project_id: projectId || "proj-default-gen-eng",
+        project_id: targetProjectId,
         sprint_id: sprintId,
         title: "Capacity Planning & Commitment vs Completion Gap",
         rationale: `Team completed ${sprint?.completed_points || 0} out of ${sprint?.committed_points || 0} committed points.`,
@@ -537,7 +541,7 @@ class RetroAgentHandlers {
         state: "suggested",
       },
       {
-        project_id: projectId || "proj-default-gen-eng",
+        project_id: targetProjectId,
         sprint_id: sprintId,
         title: "Carried-Over Action Item Follow-Through",
         rationale: `${existingActions.length} action items carried over from previous sprints need attention.`,
@@ -572,9 +576,13 @@ class RetroAgentHandlers {
         model: modelOpts.model,
       });
 
+      if (sprintId) {
+        await repo.clearSuggestedTopics(sprintId);
+      }
+
       if (agentResult.success && agentResult.suggestions && agentResult.suggestions.length > 0) {
         const generatedTopics = agentResult.suggestions.map((s, idx) => ({
-          project_id: projectId || "proj-default-gen-eng",
+          project_id: targetProjectId,
           sprint_id: sprintId,
           title: s.title,
           rationale: s.basis || s.description,
@@ -588,6 +596,9 @@ class RetroAgentHandlers {
       }
     } catch (err) {
       debugLogger.warn("Failed SuggestionsAgent topic generation; falling back to default topics", { error: err.message });
+      if (sprintId) {
+        await repo.clearSuggestedTopics(sprintId);
+      }
       await repo.saveTopics(defaultTopics);
     }
 
