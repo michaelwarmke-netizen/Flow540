@@ -97,6 +97,7 @@ describe('NotificationDispatcher & Prompts', () => {
     const context = {
       projectId: 'proj-1',
       projectIdCode: 'PROJ-GENENG',
+      topics: [{ title: 'Topic 1' }],
     };
 
     const prompt = buildNotificationPrompt('preRetroPreview', context, 'email', 'coach@flow.ai', '');
@@ -104,6 +105,35 @@ describe('NotificationDispatcher & Prompts', () => {
     assert.match(prompt, /Delivery Channel: EMAIL/);
     assert.match(prompt, /Project Code: PROJ-GENENG/);
     assert.match(prompt, /MCP Team Resolution: Call an available MCP team lookup tool/);
+  });
+
+  it('buildNotificationPrompt throws error when required prompt data is missing', () => {
+    const emptyContext = { projectId: 'proj-1' };
+
+    assert.throws(
+      () => buildNotificationPrompt('preRetroPreview', emptyContext, 'slack'),
+      /No agenda topics found/
+    );
+
+    assert.throws(
+      () => buildNotificationPrompt('ownerReminder', emptyContext, 'slack'),
+      /No carried-over or open action items found/
+    );
+
+    assert.throws(
+      () => buildNotificationPrompt('actionFollowup', emptyContext, 'slack'),
+      /No open action items found/
+    );
+
+    assert.throws(
+      () => buildNotificationPrompt('postRetroSummary', emptyContext, 'slack'),
+      /No retrospective analysis summary/
+    );
+
+    assert.throws(
+      () => buildNotificationPrompt('insightShare', emptyContext, 'slack'),
+      /No coach insights or patterns found/
+    );
   });
 
   it('NOTIFICATION_AGENT_SYSTEM_PROMPT includes strict anti-hallucination and grounding rule', () => {

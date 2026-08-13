@@ -114,75 +114,89 @@ export function buildNotificationPrompt(
 
   switch (triggerKey) {
     case 'preRetroPreview':
-      prompt += `Upcoming Retrospective Agenda Topics:\n`;
-      if (context.topics && context.topics.length > 0) {
-        context.topics.forEach((t, i) => {
-          prompt += `${i + 1}. **${t.title}**${t.rationale ? `: ${t.rationale}` : ''}\n`;
-        });
-      } else {
-        prompt += `- General sprint review and continuous improvement discussion.\n`;
+      if (!context.topics || context.topics.length === 0) {
+        throw new Error(
+          `Cannot construct prompt for 'preRetroPreview': No agenda topics found for project '${context.projectIdCode || context.projectId || 'default'}'. Please add or generate agenda topics first.`
+        );
       }
+      prompt += `Upcoming Retrospective Agenda Topics:\n`;
+      context.topics.forEach((t, i) => {
+        prompt += `${i + 1}. **${t.title}**${t.rationale ? `: ${t.rationale}` : ''}\n`;
+      });
       prompt += `\nTask: Compose a Pre-Retro Topic Preview message inviting team members to review and accept discussion topics before the retrospective meeting.`;
       break;
 
     case 'ownerReminder':
-      prompt += `Carried-Over Action Items & Assigned Owners:\n`;
-      if (context.actionItems && context.actionItems.length > 0) {
-        context.actionItems.forEach((item, i) => {
-          prompt += `${i + 1}. **${item.title}** (Owner: ${item.owner || 'Unassigned'}, Status: ${item.status || 'open'})\n`;
-        });
-      } else {
-        prompt += `- No carried-over action items outstanding.\n`;
+      if (!context.actionItems || context.actionItems.length === 0) {
+        throw new Error(
+          `Cannot construct prompt for 'ownerReminder': No carried-over or open action items found for project '${context.projectIdCode || context.projectId || 'default'}'. Please ensure action items exist on the dashboard.`
+        );
       }
+      prompt += `Carried-Over Action Items & Assigned Owners:\n`;
+      context.actionItems.forEach((item, i) => {
+        prompt += `${i + 1}. **${item.title}** (Owner: ${item.owner || 'Unassigned'}, Status: ${item.status || 'open'})\n`;
+      });
       prompt += `\nTask: Compose an Action Item Owner Reminder message prompting owners to update their carried-over items before the upcoming retrospective.`;
       break;
 
-    case 'postRetroSummary':
+    case 'postRetroSummary': {
+      const hasProposals = Array.isArray(context.proposals) && context.proposals.length > 0;
+      const hasActionItems = Array.isArray(context.actionItems) && context.actionItems.length > 0;
+      const hasSummaryText = Boolean(context.summaryText && context.summaryText.trim());
+
+      if (!hasProposals && !hasActionItems && !hasSummaryText) {
+        throw new Error(
+          `Cannot construct prompt for 'postRetroSummary': No retrospective analysis summary, proposals, or action items found for project '${context.projectIdCode || context.projectId || 'default'}'. Please run retrospective analysis on the dashboard first.`
+        );
+      }
+
       prompt += `Retrospective: ${context.retroTitle || context.sprintName || 'Sprint Retrospective'}\n`;
       if (context.summaryText) {
         prompt += `Executive Summary & Key Takeaways:\n${context.summaryText}\n\n`;
       }
-      if (context.proposals && context.proposals.length > 0) {
+      if (hasProposals) {
         prompt += `Newly Created Action Proposals & Commitments:\n`;
-        context.proposals.forEach((p, i) => {
+        context.proposals!.forEach((p, i) => {
           prompt += `${i + 1}. **${p.title}** (Assigned: ${p.owner || 'Unassigned'})\n   ${p.description || ''}\n`;
         });
         prompt += `\n`;
       }
-      if (context.actionItems && context.actionItems.length > 0) {
+      if (hasActionItems) {
         prompt += `Action Items & Commitments:\n`;
-        context.actionItems.forEach((item, i) => {
+        context.actionItems!.forEach((item, i) => {
           prompt += `${i + 1}. **${item.title}** (Owner: ${item.owner || 'Unassigned'}, Status: ${item.status || 'open'})\n`;
         });
         prompt += `\n`;
       }
-      if ((!context.proposals || context.proposals.length === 0) && (!context.actionItems || context.actionItems.length === 0)) {
-        prompt += `Key Retrospective Takeaways:\n- Retrospective completed successfully with team process improvements identified.\n\n`;
-      }
       prompt += `Task: Compose a Post-Retro Personal Summary message summarizing session completion, executive takeaways, and assigned action items for participants.`;
       break;
+    }
 
     case 'actionFollowup':
-      prompt += `Current Open Action Items:\n`;
-      if (context.actionItems && context.actionItems.length > 0) {
-        context.actionItems.forEach((item, i) => {
-          prompt += `${i + 1}. **${item.title}** — Owner: ${item.owner || 'Unassigned'} | Status: ${item.status || 'open'}\n`;
-        });
-      } else {
-        prompt += `- No open action items currently being tracked.\n`;
+      if (!context.actionItems || context.actionItems.length === 0) {
+        throw new Error(
+          `Cannot construct prompt for 'actionFollowup': No open action items found for project '${context.projectIdCode || context.projectId || 'default'}'. Please ensure action items exist on the dashboard.`
+        );
       }
+      prompt += `Current Open Action Items:\n`;
+      context.actionItems.forEach((item, i) => {
+        prompt += `${i + 1}. **${item.title}** — Owner: ${item.owner || 'Unassigned'} | Status: ${item.status || 'open'}\n`;
+      });
       prompt += `\nTask: Compose a brief, friendly Mid-Sprint Action Follow-Up message. Keep it short and concise: write 1 short friendly reminder sentence followed directly by the list of current open action items showing item title, assigned owner, and status. Do not include long paragraphs or unnecessary summary text.`;
       break;
 
     case 'insightShare':
-      prompt += `Agile Coach Detected Team Insights & Patterns:\n`;
-      if (context.insights && context.insights.length > 0) {
-        context.insights.forEach((ins, i) => {
-          prompt += `${i + 1}. **${ins.title}** (${ins.insight_type || 'pattern'})\n   ${ins.description}\n`;
-        });
-      } else {
-        prompt += `- Team velocity and process trends are currently being monitored.\n`;
+      if (!context.insights || context.insights.length === 0) {
+        throw new Error(
+          `Cannot construct prompt for 'insightShare': No coach insights or patterns found for project '${context.projectIdCode || context.projectId || 'default'}'. Please run coach insight analysis first.`
+        );
       }
+      prompt += `Agile Coach Detected Team Insights & Patterns:\n`;
+      context.insights.forEach((ins, i) => {
+        prompt += `${i + 1}. **${ins.title}** (${ins.insight_type || 'pattern'})\n   ${ins.description}\n`;
+      });
+      prompt += `\nTask: Compose a Coach Insight Share message highlighting team positive trends, blind spots, and detected operational patterns.`;
+      break;
       prompt += `\nTask: Compose a Coach Insight Share message highlighting team positive trends, blind spots, and detected operational patterns.`;
       break;
 

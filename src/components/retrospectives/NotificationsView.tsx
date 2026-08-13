@@ -100,6 +100,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [sendingKeys, setSendingKeys] = useState<Set<string>>(new Set());
   const [testSuccessKeys, setTestSuccessKeys] = useState<Set<string>>(new Set());
+  const [testErrorKeys, setTestErrorKeys] = useState<Record<string, string>>({});
 
   const [agentTools, setAgentTools] = useState<any[] | null>(null);
   const [isLoadingTools, setIsLoadingTools] = useState<boolean>(false);
@@ -340,6 +341,11 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
       next.delete(key);
       return next;
     });
+    setTestErrorKeys((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
     try {
       const recipient =
         channel === "email"
@@ -350,7 +356,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
           ? `Slack (#${slackChannelId.trim()})`
           : "Slack (#general)";
 
-      await retroClient.sendSlack({
+      const res = await retroClient.sendSlack({
         projectId: currentProject.id,
         recipientName: recipient,
         messageType: key,
@@ -359,6 +365,11 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
           channel === "email" && senderEmail ? ` (From: ${senderEmail})` : ""
         }.`,
       });
+
+      if (res && res.status === "failed") {
+        throw new Error(res.message_content || "Notification dispatch failed.");
+      }
+
       await loadSlackLogs(currentProject.id);
       setTestSuccessKeys((prev) => new Set(prev).add(key));
       setTimeout(() => {
@@ -368,8 +379,10 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
           return next;
         });
       }, 3000);
-    } catch (err) {
+    } catch (err: any) {
+      const errMsg = err?.message || String(err);
       console.error("Failed to trigger test notification", err);
+      setTestErrorKeys((prev) => ({ ...prev, [key]: errMsg }));
     } finally {
       setSendingKeys((prev) => {
         const next = new Set(prev);
@@ -596,100 +609,109 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
             const isSuccess = testSuccessKeys.has(item.key);
 
             return (
-              <div
-                key={item.key}
-                className={`p-4 rounded-xl border transition-all flex items-center justify-between gap-4 ${
-                  isEnabled ? "border-border/60 bg-surface-1/40" : "border-border/30 bg-muted/20 opacity-70"
-                }`}
-              >
-                {/* Left Side: Icon, Title, Badge, Description */}
-                <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    {item.icon}
-                    <span className="font-semibold text-xs text-foreground">{item.title}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-1 border border-border/40 text-muted-foreground">
-                      {item.badge}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-                </div>
-
-                {/* Right Side: Test Trigger button + Channel Toggle (Slack / Email) + ON/OFF Toggle */}
-                <div className="flex items-center gap-3 shrink-0">
-                  {/* Test Button */}
-                  <Button
-                    size="sm"
-                    variant={isSuccess ? "default" : "outline"}
-                    onClick={() => handleTestTrigger(item.key, item.title, channel)}
-                    disabled={!isEnabled || isSending}
-                    className={`gap-1.5 text-xs h-8 px-2.5 font-medium transition-all ${
-                      isSuccess
-                        ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
-                        : "border-border/60 hover:bg-surface-1"
-                    }`}
-                    title="Send a sample test notification"
-                  >
-                    {isSending ? (
-                      <>
-                        <Loader2 size={12} className="animate-spin" />
-                        Sending...
-                      </>
-                    ) : isSuccess ? (
-                      <>
-                        <CheckCircle2 size={12} className="text-white" />
-                        Sent!
-                      </>
-                    ) : (
-                      <>
-                        <Play size={12} className="text-primary fill-primary" />
-                      </>
-                    )}
-                  </Button>
-
-                  {/* Channel Toggle (Slack vs Email) - rendered when enabled */}
-                  {isEnabled && (
-                    <div className="flex items-center p-0.5 rounded-lg bg-surface-1 border border-border/60 text-xs font-medium">
-                      <button
-                        type="button"
-                        onClick={() => handleChannelChange(item.key, "slack")}
-                        className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
-                          channel === "slack"
-                            ? "bg-blue-600 text-white font-semibold shadow-xs"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <MessageSquare size={12} /> Slack
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleChannelChange(item.key, "email")}
-                        className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
-                          channel === "email"
-                            ? "bg-purple-600 text-white font-semibold shadow-xs"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <Mail size={12} /> Email
-                      </button>
+              <div key={item.key} className="space-y-2">
+                <div
+                  className={`p-4 rounded-xl border transition-all flex items-center justify-between gap-4 ${
+                    isEnabled ? "border-border/60 bg-surface-1/40" : "border-border/30 bg-muted/20 opacity-70"
+                  }`}
+                >
+                  {/* Left Side: Icon, Title, Badge, Description */}
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      {item.icon}
+                      <span className="font-semibold text-xs text-foreground">{item.title}</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-1 border border-border/40 text-muted-foreground">
+                        {item.badge}
+                      </span>
                     </div>
-                  )}
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+                  </div>
 
-                  {/* Enable / Disable ON/OFF Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggle(item.key)}
-                    className={`w-11 h-6 shrink-0 rounded-full p-0.5 transition-colors duration-200 ease-in-out cursor-pointer ${
-                      isEnabled ? "bg-primary" : "bg-muted"
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
-                        isEnabled ? "translate-x-5" : "translate-x-0"
+                  {/* Right Side: Test Trigger button + Channel Toggle (Slack / Email) + ON/OFF Toggle */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    {/* Test Button */}
+                    <Button
+                      size="sm"
+                      variant={isSuccess ? "default" : "outline"}
+                      onClick={() => handleTestTrigger(item.key, item.title, channel)}
+                      disabled={!isEnabled || isSending}
+                      className={`gap-1.5 text-xs h-8 px-2.5 font-medium transition-all ${
+                        isSuccess
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                          : "border-border/60 hover:bg-surface-1"
                       }`}
-                    />
-                  </button>
+                      title="Send a sample test notification"
+                    >
+                      {isSending ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" />
+                          Sending...
+                        </>
+                      ) : isSuccess ? (
+                        <>
+                          <CheckCircle2 size={12} className="text-white" />
+                          Sent!
+                        </>
+                      ) : (
+                        <>
+                          <Play size={12} className="text-primary fill-primary" />
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Channel Toggle (Slack vs Email) - rendered when enabled */}
+                    {isEnabled && (
+                      <div className="flex items-center p-0.5 rounded-lg bg-surface-1 border border-border/60 text-xs font-medium">
+                        <button
+                          type="button"
+                          onClick={() => handleChannelChange(item.key, "slack")}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                            channel === "slack"
+                              ? "bg-blue-600 text-white font-semibold shadow-xs"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <MessageSquare size={12} /> Slack
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleChannelChange(item.key, "email")}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                            channel === "email"
+                              ? "bg-purple-600 text-white font-semibold shadow-xs"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Mail size={12} /> Email
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Enable / Disable ON/OFF Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggle(item.key)}
+                      className={`w-11 h-6 shrink-0 rounded-full p-0.5 transition-colors duration-200 ease-in-out cursor-pointer ${
+                        isEnabled ? "bg-primary" : "bg-muted"
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+                          isEnabled ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
+
+                {/* Error Banner when dispatch fails or prompt data missing */}
+                {testErrorKeys[item.key] && (
+                  <div className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-2 bg-red-500/10 p-2.5 rounded-lg border border-red-500/30">
+                    <AlertCircle size={14} className="shrink-0 text-red-500" />
+                    <span>{testErrorKeys[item.key]}</span>
+                  </div>
+                )}
               </div>
             );
           })}
