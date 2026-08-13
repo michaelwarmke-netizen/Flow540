@@ -32,6 +32,8 @@ export interface NotificationDispatchContext {
   insights?: Array<{ title: string; description: string; insight_type?: string }>;
   sprintName?: string;
   retroTitle?: string;
+  summaryText?: string;
+  channel?: DeliveryChannel;
 }
 
 export interface DispatchResult {

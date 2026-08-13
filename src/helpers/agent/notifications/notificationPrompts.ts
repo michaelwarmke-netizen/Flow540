@@ -136,15 +136,24 @@ export function buildNotificationPrompt(
       break;
 
     case 'postRetroSummary':
-      prompt += `Newly Created Action Proposals / Commitments:\n`;
+      prompt += `Retrospective: ${context.sprintName || context.retroTitle || 'Sprint Retrospective'}\n`;
+      if (context.summaryText) {
+        prompt += `Executive Summary & Key Takeaways:\n${context.summaryText}\n\n`;
+      }
       if (context.proposals && context.proposals.length > 0) {
+        prompt += `Newly Created Action Proposals & Commitments:\n`;
         context.proposals.forEach((p, i) => {
           prompt += `${i + 1}. **${p.title}** (Assigned: ${p.owner || 'Unassigned'})\n   ${p.description || ''}\n`;
         });
+      } else if (context.actionItems && context.actionItems.length > 0) {
+        prompt += `Action Items & Commitments:\n`;
+        context.actionItems.forEach((item, i) => {
+          prompt += `${i + 1}. **${item.title}** (Owner: ${item.owner || 'Unassigned'})\n`;
+        });
       } else {
-        prompt += `- Retrospective completed successfully.\n`;
+        prompt += `Key Retrospective Takeaways:\n- Retrospective completed successfully with team process improvements identified.\n`;
       }
-      prompt += `\nTask: Compose a Post-Retro Personal Summary message summarizing session completion and assigned action items for participants.`;
+      prompt += `\nTask: Compose a Post-Retro Personal Summary message summarizing session completion, executive takeaways, and assigned action items for participants.`;
       break;
 
     case 'actionFollowup':
