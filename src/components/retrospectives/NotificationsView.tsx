@@ -98,8 +98,8 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
   const [notifications, setNotifications] = useState<CoachSlackNotification[]>([]);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
-  const [testingKey, setTestingKey] = useState<string | null>(null);
-  const [testSuccessKey, setTestSuccessKey] = useState<string | null>(null);
+  const [sendingKeys, setSendingKeys] = useState<Set<string>>(new Set());
+  const [testSuccessKeys, setTestSuccessKeys] = useState<Set<string>>(new Set());
 
   const [agentTools, setAgentTools] = useState<any[] | null>(null);
   const [isLoadingTools, setIsLoadingTools] = useState<boolean>(false);
@@ -334,8 +334,12 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
 
   const handleTestTrigger = async (key: string, title: string, channel: DeliveryChannel) => {
     if (!currentProject) return;
-    setTestingKey(key);
-    setTestSuccessKey(null);
+    setSendingKeys((prev) => new Set(prev).add(key));
+    setTestSuccessKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
     try {
       const recipient =
         channel === "email"
@@ -356,12 +360,22 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
         }.`,
       });
       await loadSlackLogs(currentProject.id);
-      setTestSuccessKey(key);
-      setTimeout(() => setTestSuccessKey(null), 3000);
+      setTestSuccessKeys((prev) => new Set(prev).add(key));
+      setTimeout(() => {
+        setTestSuccessKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }, 3000);
     } catch (err) {
       console.error("Failed to trigger test notification", err);
     } finally {
-      setTestingKey(null);
+      setSendingKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
   };
 
@@ -578,8 +592,8 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
             const itemSetting = config[item.key] || DEFAULT_TYPE_SETTING;
             const isEnabled = itemSetting.enabled;
             const channel = itemSetting.channel || "slack";
-            const isTesting = testingKey === item.key;
-            const isSuccess = testSuccessKey === item.key;
+            const isSending = sendingKeys.has(item.key);
+            const isSuccess = testSuccessKeys.has(item.key);
 
             return (
               <div
@@ -607,7 +621,7 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
                     size="sm"
                     variant={isSuccess ? "default" : "outline"}
                     onClick={() => handleTestTrigger(item.key, item.title, channel)}
-                    disabled={!isEnabled || isTesting}
+                    disabled={!isEnabled || isSending}
                     className={`gap-1.5 text-xs h-8 px-2.5 font-medium transition-all ${
                       isSuccess
                         ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
@@ -615,10 +629,10 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
                     }`}
                     title="Send a sample test notification"
                   >
-                    {isTesting ? (
+                    {isSending ? (
                       <>
                         <Loader2 size={12} className="animate-spin" />
-                        Testing...
+                        Sending...
                       </>
                     ) : isSuccess ? (
                       <>
