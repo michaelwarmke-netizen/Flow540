@@ -10,6 +10,7 @@ const { runActionItemAgent } = require("./agent/agents/actionItemAgent.ts");
 const { runSuggestionsAgent } = require("./agent/agents/suggestionsAgent.ts");
 const { runTopicCoverageAgent } = require("./agent/agents/topicCoverageAgent.ts");
 const { mapActionItemOwners } = require("../utils/mcpNameMapper.ts");
+const { calculateSpeakerBalance } = require("../utils/transcriptAnalytics.ts");
 
 class RetroAgentHandlers {
   constructor(databaseManager, broadcastToWindows, mcpClient) {

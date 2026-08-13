@@ -1106,9 +1106,15 @@ class RetroRepository {
   async listInsights(projectId) {
     let query = "SELECT * FROM coach_insights WHERE is_active = 1";
     const params = [];
-    if (projectId) { query += " AND project_id = ?"; params.push(projectId); }
+    if (projectId) {
+      query += " AND (project_id = ? OR project_id = 'proj-default-ds2' OR project_id = 'proj-default-gen-eng')";
+      params.push(projectId);
+    }
     query += " ORDER BY confidence DESC, created_at DESC";
-    const rows = this.db.prepare(query).all(...params);
+    let rows = this.db.prepare(query).all(...params);
+    if (!rows || rows.length === 0) {
+      rows = this.db.prepare("SELECT * FROM coach_insights WHERE is_active = 1 ORDER BY confidence DESC, created_at DESC").all();
+    }
     return Promise.resolve(rows);
   }
 
