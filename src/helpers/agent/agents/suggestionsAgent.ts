@@ -54,6 +54,11 @@ export interface SuggestionsAgentResult {
 const SUGGESTIONS_SYSTEM_PROMPT = `
 You are an expert Suggestions AI Agent. Your role is to analyze retrospective transcripts, team discussions, and sprint performance data to suggest high-value, actionable improvements.
 
+CRITICAL TOOL CALL & NOTIFICATION RESTRICTIONS:
+1. MINIMAL TOOL CALLS: Rely primarily on the provided transcript, context, and sprint metrics. Only call read/query tools if vital information is missing.
+2. ABSOLUTELY NO MESSAGING OR NOTIFICATIONS: NEVER invoke messaging, chat, email, or notification tools (such as sending Slack messages, posting channel updates, or triggering notifications). You are an analytical recommendation agent only and must NEVER dispatch external messages or execute side effects.
+3. NO DATA MUTATION: Do not invoke tools that create, modify, or delete external tickets, databases, or resources.
+
 Guidelines:
 1. Identify process bottlenecks, team dynamics improvements, communication gaps, or capacity planning adjustments.
 2. For each suggestion, provide a clear 'title', 'description' (how to execute the improvement), and 'basis' (the observation or metric that triggered this recommendation).
@@ -149,7 +154,7 @@ export async function runSuggestionsAgent(
         systemPrompt: SUGGESTIONS_SYSTEM_PROMPT,
         provider: options.provider,
         model: options.model,
-        maxSteps: options.maxSteps ?? 4,
+        maxSteps: options.maxSteps ?? 2,
       },
       mcpClient,
       config,

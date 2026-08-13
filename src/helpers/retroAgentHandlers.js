@@ -602,30 +602,6 @@ class RetroAgentHandlers {
       await repo.saveTopics(defaultTopics);
     }
 
-    // --- Autonomous Notification Trigger Dispatch ---
-    try {
-      const targetProjectId = projectId || "proj-default-gen-eng";
-      const topics = await repo.listTopics(targetProjectId, sprintId);
-      const carriedActions = existingActions.filter((a) => a.status !== "completed");
-      const dispatcher = this._getNotificationDispatcher(settings);
-
-      // 1. Dispatch preRetroPreview
-      await dispatcher.dispatch("preRetroPreview", {
-        projectId: targetProjectId,
-        topics: topics.map((t) => ({ title: t.title, rationale: t.rationale, state: t.state })),
-        sprintName: sprint?.name,
-      });
-
-      // 2. Dispatch ownerReminder
-      await dispatcher.dispatch("ownerReminder", {
-        projectId: targetProjectId,
-        actionItems: carriedActions.map((a) => ({ title: a.title, owner: a.owner, status: a.status })),
-        sprintName: sprint?.name,
-      });
-    } catch (dispatchErr) {
-      debugLogger.warn("Pre-retro notification dispatch failed (non-fatal)", { error: dispatchErr.message });
-    }
-
     return repo.listTopics(projectId, sprintId);
   }
 
