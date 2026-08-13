@@ -138,7 +138,7 @@ export function buildNotificationPrompt(
       break;
 
     case 'postRetroSummary':
-      prompt += `Retrospective: ${context.sprintName || context.retroTitle || 'Sprint Retrospective'}\n`;
+      prompt += `Retrospective: ${context.retroTitle || context.sprintName || 'Sprint Retrospective'}\n`;
       if (context.summaryText) {
         prompt += `Executive Summary & Key Takeaways:\n${context.summaryText}\n\n`;
       }
@@ -147,15 +147,19 @@ export function buildNotificationPrompt(
         context.proposals.forEach((p, i) => {
           prompt += `${i + 1}. **${p.title}** (Assigned: ${p.owner || 'Unassigned'})\n   ${p.description || ''}\n`;
         });
-      } else if (context.actionItems && context.actionItems.length > 0) {
+        prompt += `\n`;
+      }
+      if (context.actionItems && context.actionItems.length > 0) {
         prompt += `Action Items & Commitments:\n`;
         context.actionItems.forEach((item, i) => {
-          prompt += `${i + 1}. **${item.title}** (Owner: ${item.owner || 'Unassigned'})\n`;
+          prompt += `${i + 1}. **${item.title}** (Owner: ${item.owner || 'Unassigned'}, Status: ${item.status || 'open'})\n`;
         });
-      } else {
-        prompt += `Key Retrospective Takeaways:\n- Retrospective completed successfully with team process improvements identified.\n`;
+        prompt += `\n`;
       }
-      prompt += `\nTask: Compose a Post-Retro Personal Summary message summarizing session completion, executive takeaways, and assigned action items for participants.`;
+      if ((!context.proposals || context.proposals.length === 0) && (!context.actionItems || context.actionItems.length === 0)) {
+        prompt += `Key Retrospective Takeaways:\n- Retrospective completed successfully with team process improvements identified.\n\n`;
+      }
+      prompt += `Task: Compose a Post-Retro Personal Summary message summarizing session completion, executive takeaways, and assigned action items for participants.`;
       break;
 
     case 'actionFollowup':

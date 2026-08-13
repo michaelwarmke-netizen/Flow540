@@ -687,60 +687,111 @@ class RetroAgentHandlers {
 
     try {
       if (messageType === "preRetroPreview") {
-        const topics = await repo.listTopics(targetProjectId);
+        let topics = await repo.listTopics(targetProjectId);
+        if (!topics || topics.length === 0) {
+          topics = await repo.listTopics();
+        }
         context.topics = topics.map((t) => ({ title: t.title, rationale: t.rationale, state: t.state }));
+        const sprints = await repo.listSprints();
+        if (sprints && sprints.length > 0) {
+          context.sprintName = sprints[0].name;
+        }
       } else if (messageType === "ownerReminder" || messageType === "actionFollowup") {
-        const actions = await repo.listTrackedActions();
-        const mappedActions = actions.map((a) => ({ title: a.title, owner: a.owner, status: a.status }));
+        const allActions = await repo.listTrackedActions();
+        const openActions = allActions.filter((a) => a.status !== "completed");
+        const actionsToUse = openActions.length > 0 ? openActions : allActions;
+
+        const mappedActions = actionsToUse.map((a) => ({
+          title: a.title,
+          owner: a.owner || "Unassigned",
+          status: a.status || "open",
+          description: a.description || "",
+        }));
+
         context.actionItems = mapActionItemOwners(mappedActions);
+
+        const sprints = await repo.listSprints();
+        if (sprints && sprints.length > 0) {
+          context.sprintName = sprints[0].name;
+        }
       } else if (messageType === "postRetroSummary") {
-        const retros = await repo.listRetros(targetProjectId);
+        const retros = await repo.listRetrospectives();
         const latestRetro = retros && retros.length > 0 ? retros[0] : null;
         let proposals = [];
         let actionItems = [];
 
         if (latestRetro) {
-          proposals = await repo.listProposals(latestRetro.id);
           context.retroTitle = latestRetro.title;
-        }
 
-        if (!proposals || proposals.length === 0) {
-          const allProposals = repo.db?.prepare("SELECT * FROM retro_proposals ORDER BY created_at DESC LIMIT 5")?.all() || [];
-          const trackedActions = await repo.listTrackedActions();
-          if (allProposals.length > 0) {
-            proposals = allProposals;
-          } else if (trackedActions.length > 0) {
-            actionItems = trackedActions;
+          proposals = await repo.listProposals(latestRetro.id);
+          const allActions = await repo.listTrackedActions();
+          actionItems = allActions.filter(
+            (a) => a.retrospective_id === latestRetro.id || a.sprint_id === latestRetro.sprint_id
+          );
+
+          if (latestRetro.sprint_id) {
+            const sprint = await repo.getSprintSnapshot(latestRetro.sprint_id);
+            if (sprint) {
+              context.sprintName = sprint.name;
+              const parts = [];
+              if (sprint.completed_points !== undefined && sprint.committed_points !== undefined) {
+                parts.push(`Sprint Velocity: ${sprint.completed_points} / ${sprint.committed_points} story points completed (${sprint.completed_issues || 0} of ${sprint.total_issues || 0} issues).`);
+              }
+              if (sprint.blockers) {
+                parts.push(`Key Blockers & Challenges: ${sprint.blockers}.`);
+              }
+              if (parts.length > 0) {
+                context.summaryText = parts.join(" ");
+              }
+            }
+          }
+
+          if (latestRetro.topic_coverage_details_json) {
+            try {
+              const topicsDetails = JSON.parse(latestRetro.topic_coverage_details_json);
+              if (Array.isArray(topicsDetails) && topicsDetails.length > 0) {
+                const topicNames = topicsDetails.map((t) => t.title || t.topicId).join("; ");
+                context.summaryText = (context.summaryText ? context.summaryText + " " : "") + `Topics Discussed: ${topicNames}.`;
+              }
+            } catch (_) {}
           }
         }
 
-        context.proposals = proposals.map((p) => ({ title: p.title, owner: p.owner, description: p.description }));
-        context.actionItems = actionItems.map((a) => ({ title: a.title, owner: a.owner, status: a.status }));
+        if ((!proposals || proposals.length === 0) && (!actionItems || actionItems.length === 0)) {
+          const allProposals = repo.db?.prepare("SELECT * FROM retro_proposals ORDER BY created_at DESC LIMIT 5")?.all() || [];
+          const allActions = await repo.listTrackedActions();
+          if (allProposals.length > 0) proposals = allProposals;
+          if (allActions.length > 0) actionItems = allActions;
+        }
+
+        context.proposals = mapActionItemOwners(
+          proposals.map((p) => ({
+            title: p.title,
+            owner: p.suggested_owner || p.owner || "Unassigned",
+            description: p.description || p.basis || "",
+          }))
+        );
+
+        context.actionItems = mapActionItemOwners(
+          actionItems.map((a) => ({
+            title: a.title,
+            owner: a.owner || "Unassigned",
+            status: a.status || "open",
+          }))
+        );
 
         if (!context.summaryText) {
-          context.summaryText = "Sprint performance metrics & retro analysis completed. Team velocity reached 32 completed points out of 40 committed. Key takeaways: PR review turnaround times improved and staging deployment automated.";
+          context.summaryText = "Sprint retrospective analysis completed. Process improvements, topics, and action items were reviewed by the team.";
         }
 
         if (!context.retroTitle) {
-          context.retroTitle = "Sprint 23 Retrospective";
-        }
-
-        if (context.proposals.length === 0 && context.actionItems.length === 0) {
-          context.proposals = [
-            {
-              title: "Automate PR Review Reminders",
-              owner: "Scrum Master",
-              description: "Configure Slack bot reminders for PRs open over 24 hours.",
-            },
-            {
-              title: "Staging Pipeline Refactoring",
-              owner: "DevOps Team",
-              description: "Reduce build times by caching Docker layers in CI.",
-            },
-          ];
+          context.retroTitle = "Sprint Retrospective Summary";
         }
       } else if (messageType === "insightShare") {
-        const insights = await repo.listInsights(targetProjectId);
+        let insights = await repo.listInsights(targetProjectId);
+        if (!insights || insights.length === 0) {
+          insights = await repo.listInsights();
+        }
         context.insights = insights;
       }
     } catch (ctxErr) {
