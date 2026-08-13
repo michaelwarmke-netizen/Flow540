@@ -56,8 +56,12 @@ export default function RetrospectivesView({ onOpenSettings }: RetrospectivesVie
       setSprints(sprintList);
       setRetros(retroList);
       setProjects(projList || []);
-      if (projList && projList.length > 0 && !currentProject) {
-        setCurrentProject(projList[0]);
+      if (projList && projList.length > 0) {
+        setCurrentProject((prev) => {
+          if (!prev) return projList[0];
+          const updated = projList.find((p) => p.id === prev.id);
+          return updated || projList[0];
+        });
       }
     } catch (err) {
       console.error("Failed to load retrospectives data", err);

@@ -299,7 +299,12 @@ export function NotificationsView({ currentProject, onProjectUpdate }: Notificat
       setConfig(parsedConfig);
       loadSlackLogs(currentProject.id);
     }
-  }, [currentProject?.id]);
+  }, [
+    currentProject?.id,
+    currentProject?.slack_channel_id,
+    currentProject?.project_id,
+    currentProject?.notification_settings,
+  ]);
 
   const loadSlackLogs = async (projId: string) => {
     try {
