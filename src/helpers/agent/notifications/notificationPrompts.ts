@@ -15,6 +15,7 @@ Guidelines:
    - "subject": string (Subject line for email)
    - "body": string (Plain text notification body)
 4. In your final text response, output the exact notification text that was composed and dispatched.
+5. CONCISENESS & BREVITY: Keep messages direct, friendly, and brief. Avoid wordy intros or long paragraphs. For action item follow-ups, provide a single friendly intro sentence followed directly by the list of open action items with their assigned owner and current status.
 
 --- FEW-SHOT TOOL CALL EXAMPLES ---
 
@@ -157,15 +158,15 @@ export function buildNotificationPrompt(
       break;
 
     case 'actionFollowup':
-      prompt += `In-Progress Sprint Action Items:\n`;
+      prompt += `Current Open Action Items:\n`;
       if (context.actionItems && context.actionItems.length > 0) {
         context.actionItems.forEach((item, i) => {
-          prompt += `${i + 1}. **${item.title}** (Owner: ${item.owner || 'Unassigned'}, Status: ${item.status || 'in_progress'})\n`;
+          prompt += `${i + 1}. **${item.title}** — Owner: ${item.owner || 'Unassigned'} | Status: ${item.status || 'open'}\n`;
         });
       } else {
-        prompt += `- Action items currently being tracked for mid-sprint progress.\n`;
+        prompt += `- No open action items currently being tracked.\n`;
       }
-      prompt += `\nTask: Compose a Mid-Sprint Action Follow-Up message checking in on team progress for assigned action items.`;
+      prompt += `\nTask: Compose a brief, friendly Mid-Sprint Action Follow-Up message. Keep it short and concise: write 1 short friendly reminder sentence followed directly by the list of current open action items showing item title, assigned owner, and status. Do not include long paragraphs or unnecessary summary text.`;
       break;
 
     case 'insightShare':
