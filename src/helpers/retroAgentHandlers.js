@@ -9,7 +9,7 @@ const { parseRetroResponse, buildRepairPrompt } = require("../utils/retroRespons
 const { runActionItemAgent } = require("./agent/agents/actionItemAgent.ts");
 const { runSuggestionsAgent } = require("./agent/agents/suggestionsAgent.ts");
 const { runTopicCoverageAgent } = require("./agent/agents/topicCoverageAgent.ts");
-const { calculateSpeakerBalance } = require("../utils/transcriptAnalytics.ts");
+const { mapActionItemOwners } = require("../utils/mcpNameMapper.ts");
 
 class RetroAgentHandlers {
   constructor(databaseManager, broadcastToWindows, mcpClient) {
@@ -691,7 +691,8 @@ class RetroAgentHandlers {
         context.topics = topics.map((t) => ({ title: t.title, rationale: t.rationale, state: t.state }));
       } else if (messageType === "ownerReminder" || messageType === "actionFollowup") {
         const actions = await repo.listTrackedActions();
-        context.actionItems = actions.map((a) => ({ title: a.title, owner: a.owner, status: a.status }));
+        const mappedActions = actions.map((a) => ({ title: a.title, owner: a.owner, status: a.status }));
+        context.actionItems = mapActionItemOwners(mappedActions);
       } else if (messageType === "postRetroSummary") {
         const retros = await repo.listRetros(targetProjectId);
         const latestRetro = retros && retros.length > 0 ? retros[0] : null;

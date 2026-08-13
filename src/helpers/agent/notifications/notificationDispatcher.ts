@@ -11,6 +11,8 @@ import type {
   TriggerKey,
 } from './notificationTypes.ts';
 
+import { mapActionItemOwners } from '../../../utils/mcpNameMapper.ts';
+
 const logger = new Logger('NotificationDispatcher');
 
 export class NotificationDispatcher {
@@ -108,9 +110,17 @@ export class NotificationDispatcher {
           ? `Slack (#${slackChannel.trim()})`
           : 'Slack (#general)';
 
+      const mappedContext: NotificationDispatchContext = {
+        ...context,
+        slackChannelId: slackChannel,
+        projectIdCode: project.project_id,
+        actionItems: context.actionItems ? mapActionItemOwners(context.actionItems) : undefined,
+        proposals: context.proposals ? mapActionItemOwners(context.proposals) : undefined,
+      };
+
       const prompt = buildNotificationPrompt(
         triggerKey,
-        { ...context, slackChannelId: slackChannel, projectIdCode: project.project_id },
+        mappedContext,
         channel,
         config.senderEmail,
         config.teamEmails

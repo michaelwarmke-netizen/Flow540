@@ -26,6 +26,7 @@ export type TriggerKey =
 export interface NotificationDispatchContext {
   projectId: string;
   slackChannelId?: string;
+  projectIdCode?: string;
   topics?: Array<{ title: string; rationale?: string; state?: string }>;
   actionItems?: Array<{ title: string; owner: string; status?: string }>;
   proposals?: Array<{ title: string; owner: string; description?: string }>;

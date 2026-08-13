@@ -6,6 +6,7 @@ import {
   type ModelDescribeResult,
   type RetroAnalysisProgress,
   type CoachTopic,
+  type Project,
   retroClient,
 } from "../../services/retro/client";
 import {
