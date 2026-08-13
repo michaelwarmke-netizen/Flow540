@@ -105,4 +105,10 @@ describe('NotificationDispatcher & Prompts', () => {
     assert.match(prompt, /Project Code: PROJ-GENENG/);
     assert.match(prompt, /MCP Team Resolution: Call an available MCP team lookup tool/);
   });
+
+  it('NOTIFICATION_AGENT_SYSTEM_PROMPT includes strict anti-hallucination and grounding rule', () => {
+    const { NOTIFICATION_AGENT_SYSTEM_PROMPT } = require('./notificationPrompts.ts');
+    assert.match(NOTIFICATION_AGENT_SYSTEM_PROMPT, /STRICT FACTUAL ACCURACY & NO HALLUCINATION/);
+    assert.match(NOTIFICATION_AGENT_SYSTEM_PROMPT, /DO NOT make up or hallucinate any information/);
+  });
 });

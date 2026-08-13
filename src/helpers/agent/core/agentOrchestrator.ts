@@ -42,6 +42,7 @@ export async function runAgent(
     tools,
     stopWhen: stepCountIs(maxSteps),
     maxOutputTokens,
+    ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
     onStepFinish(step: any) {
       const mappedStep: AgentStepResult = {
         stepType: step.stepType || 'continue',
@@ -74,6 +75,7 @@ export async function runAgent(
   const result = await agent.generate({
     prompt: options.prompt,
     abortSignal: options.abortSignal,
+    ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
   });
 
   const steps: AgentStepResult[] = (result.steps || []).map((s: any) => ({

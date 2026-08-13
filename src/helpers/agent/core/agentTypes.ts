@@ -11,6 +11,8 @@ export interface AgentRunOptions {
   maxSteps?: number;
   /** Maximum output tokens per generation */
   maxOutputTokens?: number;
+  /** Temperature override for generation */
+  temperature?: number;
   /** Provider override ('gemini', 'openai', 'anthropic', 'groq', 'local', etc.) */
   provider?: string;
   /** Model ID override */
